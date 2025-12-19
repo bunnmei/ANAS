@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">ANAS</string>
+    <string name="system">システム</string>
+    <string name="dark">ダーク</string>
+    <string name="light">ライト</string>
+    <string name="theme">テーマ</string>
+</resources>
