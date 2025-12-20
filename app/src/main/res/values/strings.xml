@@ -4,4 +4,7 @@
     <string name="dark">ダーク</string>
     <string name="light">ライト</string>
     <string name="theme">テーマ</string>
+    <string name="selectFolder">ドライブフォルダを選択</string>
+    <string name="startServer">サーバースタート</string>
+    <string name="selectedFolderStatus">選択済みフォルダステータス</string>
 </resources>

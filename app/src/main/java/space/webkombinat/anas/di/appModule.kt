@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
+import space.webkombinat.anas.data.DirectoryManager
 import space.webkombinat.anas.data.UserPreferencesRepository
 import space.webkombinat.anas.presentation.ServerVM
 import space.webkombinat.anas.presentation.SettingVM
@@ -23,6 +24,10 @@ val appModule = module {
     single {
         UserPreferencesRepository(get())
     }
-    viewModel { ServerVM() }
+    single {
+        DirectoryManager()
+    }
+
+    viewModel { ServerVM(get()) }
     viewModel { SettingVM(get()) }
 }
