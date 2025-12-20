@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
@@ -44,6 +45,8 @@ fun ServerScreen(
     val context = LocalContext.current
     val folderState by vm.folders.collectAsState()
     val serverState by vm.serverState.collectAsState()
+    val address by vm.address.collectAsState()
+
 
     ServerScreen(
         setUri = { uri ->
@@ -51,7 +54,8 @@ fun ServerScreen(
         },
         folderList = folderState,
         serverState = serverState,
-        serviceIntent = { vm.startOrStopServer(context = context) }
+        serviceIntent = { vm.startOrStopServer(context = context) },
+        address = address
     )
 }
 
@@ -62,8 +66,8 @@ private fun ServerScreen(
     folderList: List<ExFolder>,
     serverState: SERVER_STATUS,
     serviceIntent: () -> Unit,
+    address: String
 ) {
-
     val context = LocalContext.current
     val openDocLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocumentTree()
@@ -144,7 +148,6 @@ private fun ServerScreen(
         }
 
 
-
         // 操作ボタン
         Column(
             modifier = modifier
@@ -153,6 +156,12 @@ private fun ServerScreen(
             horizontalAlignment = Alignment.End,
             verticalArrangement = Arrangement.Bottom
         ) {
+
+            Row {
+                Text("IP Address: ${address}")
+                Spacer(modifier = modifier.weight(1f))
+            }
+            Spacer(modifier = modifier.height(20.dp))
             Button(
                 onClick = {
                     openDocLauncher.launch(null)
@@ -218,6 +227,7 @@ fun ServerScreenPreview() {
             )
         ),
         serverState = SERVER_STATUS.STOPPED,
-        serviceIntent = {}
+        serviceIntent = {},
+        address = "192.168.1.1:8080"
     )
 }

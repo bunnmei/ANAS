@@ -12,6 +12,7 @@ import space.webkombinat.anas.data.ExFolder
 import space.webkombinat.anas.data.SERVER_STATUS
 import space.webkombinat.anas.data.ServerState
 import space.webkombinat.anas.server.ServerService
+import java.net.NetworkInterface
 
 class ServerVM(
     private val directoryManager: DirectoryManager,
@@ -21,6 +22,7 @@ class ServerVM(
 
     val folders = directoryManager.folders
     val serverState = serverStateClass.serverStatus
+    val address = serverStateClass.address
 
     fun setUri(uri: Uri, context: Context) {
 
@@ -42,6 +44,9 @@ class ServerVM(
             context.stopService(intent)
         }
     }
+
+
+
 
 }
 

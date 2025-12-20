@@ -44,9 +44,20 @@ android {
     buildFeatures {
         compose = true
     }
+
+    // ktorの何かが衝突するため記述
+    packaging {
+        resources {
+            excludes += "META-INF/INDEX.LIST"
+            excludes += "META-INF/*.kotlin_module"
+            excludes += "META-INF/io.netty.versions.properties"
+        }
+    }
 }
 
 dependencies {
+
+    implementation(project(":feature:server"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
