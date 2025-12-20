@@ -33,10 +33,10 @@
         </activity>
 
 
-<!--        <service-->
-<!--            android:name=".ServerService"-->
-<!--            android:foregroundServiceType="dataSync|connectedDevice"-->
-<!--            />-->
+        <service
+            android:name=".server.ServerService"
+            android:foregroundServiceType="dataSync|connectedDevice"
+            />
 
     </application>
 

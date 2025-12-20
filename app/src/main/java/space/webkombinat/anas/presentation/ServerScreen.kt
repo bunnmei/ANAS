@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.DirectionsRun
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -33,6 +34,7 @@ import androidx.compose.ui.unit.sp
 import space.webkombinat.anas.R
 import space.webkombinat.anas.data.ExFolder
 import space.webkombinat.anas.data.PreviewSize
+import space.webkombinat.anas.data.SERVER_STATUS
 
 @Composable
 fun ServerScreen(
@@ -41,12 +43,15 @@ fun ServerScreen(
 ) {
     val context = LocalContext.current
     val folderState by vm.folders.collectAsState()
+    val serverState by vm.serverState.collectAsState()
 
     ServerScreen(
         setUri = { uri ->
             vm.setUri(uri = uri, context = context)
         },
-        folderList = folderState
+        folderList = folderState,
+        serverState = serverState,
+        serviceIntent = { vm.startOrStopServer(context = context) }
     )
 }
 
@@ -54,7 +59,9 @@ fun ServerScreen(
 private fun ServerScreen(
     modifier: Modifier = Modifier,
     setUri: (Uri) -> Unit,
-    folderList: List<ExFolder>
+    folderList: List<ExFolder>,
+    serverState: SERVER_STATUS,
+    serviceIntent: () -> Unit,
 ) {
 
     val context = LocalContext.current
@@ -138,8 +145,6 @@ private fun ServerScreen(
 
 
 
-
-
         // 操作ボタン
         Column(
             modifier = modifier
@@ -164,16 +169,27 @@ private fun ServerScreen(
             }
 
             Button(
-                onClick = {},
-                enabled = true
+                onClick = {
+                    serviceIntent()
+                },
+                enabled = folderList.isNotEmpty()
             ) {
                 Row {
-                    Text(stringResource(R.string.startServer))
-                    Spacer(modifier = modifier.width(10.dp))
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.DirectionsRun,
-                        contentDescription = null
-                    )
+                    if (serverState == SERVER_STATUS.STOPPED) {
+                        Text(stringResource(R.string.startServer))
+                        Spacer(modifier = modifier.width(10.dp))
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.DirectionsRun,
+                            contentDescription = null
+                        )
+                    } else {
+                        Text(stringResource(R.string.stopServer))
+                        Spacer(modifier = modifier.width(10.dp))
+                        Icon(
+                            imageVector = Icons.Default.Stop,
+                            contentDescription = null
+                        )
+                    }
                 }
             }
         }
@@ -200,6 +216,8 @@ fun ServerScreenPreview() {
                 readable = true,
                 writable = false
             )
-        )
+        ),
+        serverState = SERVER_STATUS.STOPPED,
+        serviceIntent = {}
     )
 }
