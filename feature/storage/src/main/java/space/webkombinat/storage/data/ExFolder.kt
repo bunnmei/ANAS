@@ -1,7 +1,10 @@
-package space.webkombinat.anas.data
+package space.webkombinat.storage.data
+
+import androidx.documentfile.provider.DocumentFile
 
 data class ExFolder(
-    val folderName: String,
+    val folderName: DocumentFile,
+    val alias: String,
     val readable: Boolean,
     val writable: Boolean
 ) {

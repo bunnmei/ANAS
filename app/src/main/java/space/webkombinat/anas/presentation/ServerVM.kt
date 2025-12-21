@@ -4,22 +4,18 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.lifecycle.ViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import androidx.documentfile.provider.DocumentFile
-import space.webkombinat.anas.data.DirectoryManager
-import space.webkombinat.anas.data.ExFolder
 import space.webkombinat.anas.data.SERVER_STATUS
 import space.webkombinat.anas.data.ServerState
 import space.webkombinat.anas.server.ServerService
-import java.net.NetworkInterface
+import space.webkombinat.storage.DirectoryManager
+import space.webkombinat.storage.data.ExFolder
+
 
 class ServerVM(
     private val directoryManager: DirectoryManager,
     private val serverStateClass: ServerState
 ): ViewModel() {
-
-
     val folders = directoryManager.folders
     val serverState = serverStateClass.serverStatus
     val address = serverStateClass.address
@@ -29,7 +25,8 @@ class ServerVM(
         val rootDir = DocumentFile.fromTreeUri(context, uri) ?: return
         // folderPermissionのチェック
         val newExFolder = ExFolder(
-            folderName = rootDir.name ?: "null",
+            folderName = rootDir,
+            alias = "disk${folders.value.size + 1}",
             readable = rootDir.canRead(),
             writable = rootDir.canWrite()
         )

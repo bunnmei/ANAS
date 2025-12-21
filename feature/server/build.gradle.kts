@@ -14,6 +14,8 @@ kotlin {
 
 dependencies {
 
+    implementation(project(":feature:core"))
+
     // *0を参照
     val ex_group = "org.jetbrains.kotlin"
     val ex_module = "kotlin-stdlib-jdk8"

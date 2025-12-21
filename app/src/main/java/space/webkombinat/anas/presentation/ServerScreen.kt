@@ -32,10 +32,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.documentfile.provider.DocumentFile
 import space.webkombinat.anas.R
-import space.webkombinat.anas.data.ExFolder
 import space.webkombinat.anas.data.PreviewSize
 import space.webkombinat.anas.data.SERVER_STATUS
+import space.webkombinat.storage.data.ExFolder
 
 @Composable
 fun ServerScreen(
@@ -121,7 +122,7 @@ private fun ServerScreen(
                     modifier = modifier
                         .padding(horizontal = 16.dp),
                 ){
-                    Text(text = folder.folderName)
+                    Text(text = folder.folderName.name ?: "")
                     Spacer(modifier = modifier.weight(1f))
 
 
@@ -212,20 +213,10 @@ private fun ServerScreen(
 )
 @Composable
 fun ServerScreenPreview() {
+
     ServerScreen(
         setUri = {},
-        folderList = listOf(
-            ExFolder(
-                folderName = "Download",
-                readable = true,
-                writable = true
-            ),
-            ExFolder(
-                folderName = "FilePicker",
-                readable = true,
-                writable = false
-            )
-        ),
+        folderList = listOf(),
         serverState = SERVER_STATUS.STOPPED,
         serviceIntent = {},
         address = "192.168.1.1:8080"

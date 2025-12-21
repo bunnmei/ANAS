@@ -57,6 +57,8 @@ android {
 
 dependencies {
 
+    implementation(project(":feature:core"))
+    implementation(project(":feature:storage"))
     implementation(project(":feature:server"))
 
     implementation(libs.androidx.core.ktx)

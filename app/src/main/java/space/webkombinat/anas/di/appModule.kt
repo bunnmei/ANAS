@@ -7,11 +7,11 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
-import space.webkombinat.anas.data.DirectoryManager
 import space.webkombinat.anas.data.ServerState
 import space.webkombinat.anas.data.UserPreferencesRepository
 import space.webkombinat.anas.presentation.ServerVM
 import space.webkombinat.anas.presentation.SettingVM
+import space.webkombinat.storage.DirectoryManager
 
 val appModule = module {
 

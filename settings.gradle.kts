@@ -22,3 +22,5 @@ dependencyResolutionManagement {
 rootProject.name = "ANAS"
 include(":app")
 include(":feature:server")
+include(":feature:storage")
+include(":feature:core")
