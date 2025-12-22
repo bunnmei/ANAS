@@ -53,7 +53,11 @@ class ServerService: Service() {
         webServer?.stopServer()
         webServer = null
         serverState.setServerState(SERVER_STATUS.STOPPED)
-        wakeLock.release()
+        try {
+            wakeLock.release()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
         Log.d("ServerService", "called onDestroy()")
     }
 

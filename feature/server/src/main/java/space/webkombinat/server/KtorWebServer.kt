@@ -13,6 +13,7 @@ import space.webkombinat.server.route.folderRoute
 import space.webkombinat.server.route.rootRoute
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
 
 
@@ -23,6 +24,7 @@ class KtorWebServer(
 ) {
     private var server : NettyApplicationEngine? = null
 
+    @OptIn(ExperimentalSerializationApi::class)
     fun startServer() {
         if (server != null) return
 
@@ -37,12 +39,14 @@ class KtorWebServer(
                     prettyPrint = true
                     isLenient = true
                     ignoreUnknownKeys = true
+                    classDiscriminator = "kind"
+//                    explicitNulls = false
                 })
             }
 
             routing {
                 rootRoute(uris = uris)
-                folderRoute(fileAccess = fileAccess)
+                folderRoute(fileAccess = fileAccess, uris = uris)
             }
 
         }.start(wait = false)

@@ -1,6 +1,7 @@
 plugins {
     id("java-library")
     alias(libs.plugins.jetbrains.kotlin.jvm)
+    alias(libs.plugins.kotlinSerialization)
 }
 java {
     sourceCompatibility = JavaVersion.VERSION_11
@@ -15,5 +16,6 @@ kotlin {
 dependencies {
     val ex_group = "org.jetbrains.kotlin"
     val ex_module = "kotlin-stdlib-jdk8"
+    implementation(libs.ktor.server.content.negotiation) {exclude(group = ex_group, ex_module)}
     implementation(libs.ktor.serialization.kotlinx.json) {exclude(group = ex_group, ex_module)}
 }

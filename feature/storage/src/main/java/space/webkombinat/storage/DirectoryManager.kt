@@ -3,7 +3,9 @@ package space.webkombinat.storage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import space.webkombinat.core.FileAccess
+import space.webkombinat.core.data.ANAS_File
 import space.webkombinat.core.data.ANAS_Folder
+import space.webkombinat.core.data.ANAS_FolderOrFile
 import space.webkombinat.storage.data.ExFolder
 
 class DirectoryManager: FileAccess {
@@ -22,13 +24,46 @@ class DirectoryManager: FileAccess {
 
     }
 
-    override suspend fun readDirectory(path: String): ANAS_Folder {
-        return ANAS_Folder(
-            absolutePath = "path",
-            name = "name",
-            open = false,
-            children = null
-        )
+    override suspend fun readDirectory(disk: String, path: String): List<ANAS_FolderOrFile> {
+
+        val select_disk = _folders.value.find { folder -> folder.alias == disk }
+        val returnArray = mutableListOf<ANAS_FolderOrFile>()
+
+        val pathPrefix = if(path == "/") "" else path
+
+        if (select_disk != null) {
+           if (select_disk.folderName.isDirectory){
+               val fileList = select_disk.folderName.listFiles()
+
+
+               fileList.forEach { item ->
+                   if(item.isDirectory) {
+                       returnArray.add(
+                           ANAS_Folder(
+                               absolutePath = "${pathPrefix}/${item.name}",
+                               name = item.name ?: "",
+                               open = false,
+                               children = null
+                           )
+                       )
+                   } else {
+                       returnArray.add(
+                           ANAS_File(
+                               absolutePath = path,
+                               name = item.name ?: "",
+                               size = item.length(),
+                               lastModified = item.lastModified()
+                           )
+                       )
+                   }
+               }
+           } else {
+               println("not directory")
+           }
+        } else {
+            println("検索ストレージが見つからない")
+        }
+        return returnArray
     }
 
     override suspend fun makeDirectory(path: String) {
