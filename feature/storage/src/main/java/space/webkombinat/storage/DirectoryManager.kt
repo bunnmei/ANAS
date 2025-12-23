@@ -1,5 +1,6 @@
 package space.webkombinat.storage
 
+import androidx.documentfile.provider.DocumentFile
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import space.webkombinat.core.FileAccess
@@ -33,8 +34,8 @@ class DirectoryManager: FileAccess {
 
         if (select_disk != null) {
            if (select_disk.folderName.isDirectory){
-               val fileList = select_disk.folderName.listFiles()
-
+               val targetDir = select_disk.folderName.resolvePath(path) ?: return emptyList()
+               val fileList = targetDir.listFiles()
 
                fileList.forEach { item ->
                    if(item.isDirectory) {
@@ -72,5 +73,23 @@ class DirectoryManager: FileAccess {
 
     override suspend fun deleteDirectory(path: String) {
 
+    }
+
+    fun DocumentFile.resolvePath(path: String): DocumentFile? {
+        if (path == "/" || path.isBlank()) return this
+
+        val segments = path
+            .trim('/')
+            .split('/')
+            .filter { it.isNotEmpty() }
+
+        var current: DocumentFile? = this
+
+        for (segment in segments) {
+            current = current?.findFile(segment)
+            if (current == null) return null
+        }
+
+        return current
     }
 }

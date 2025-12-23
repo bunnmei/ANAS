@@ -23,7 +23,7 @@ fun Route.folderRoute(
         try {
             val body = call.receive<RequestPath>()
             println("Route.folderRoute() called with path = ${body.path}")
-            val folder = fileAccess.readDirectory(disk = body.path, path = "/")
+            val folder = fileAccess.readDirectory(disk = body.disk, path = body.path)
             println(folder)
             call.respond(folder)
         } catch (e: Exception) {
