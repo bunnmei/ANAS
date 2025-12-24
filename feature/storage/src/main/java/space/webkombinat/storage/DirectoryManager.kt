@@ -7,6 +7,7 @@ import space.webkombinat.core.FileAccess
 import space.webkombinat.core.data.ANAS_File
 import space.webkombinat.core.data.ANAS_Folder
 import space.webkombinat.core.data.ANAS_FolderOrFile
+import space.webkombinat.core.data.ReadResult
 import space.webkombinat.storage.data.ExFolder
 
 class DirectoryManager: FileAccess {
@@ -17,7 +18,16 @@ class DirectoryManager: FileAccess {
         _folders.value = _folders.value + newFolder
     }
 
-    override suspend fun fileRead(path: String) {
+    override suspend fun fileRead(path: String): ReadResult {
+        val disk = "disk1"
+        val select_disk = _folders.value.find { folder -> folder.alias == disk }
+
+        var currentFile: DocumentFile? = select_disk?.folderName
+        for (segment in path) {
+            currentFile = currentFile?.findFile(segment.toString())
+            if (currentFile == null) break
+        }
+
 
     }
 
