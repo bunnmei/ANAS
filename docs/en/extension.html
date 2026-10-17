@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" style="--accent: #00696e; --accent-soft: #cce8e9">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -58,7 +58,7 @@
   img.src = anas.fileUrl("/covers/a.jpg");
   await anas.upload(joinPath("/books", file.name), file, { onProgress: (d, t) =&gt; console.log(d / t) });
 &lt;/script&gt;</code></pre>
-    <p>Also: <code>stat</code>, <code>exists</code>, <code>readText</code>, <code>readJson</code>, <code>writeJson</code>, <code>listRecursive</code>, <code>mkdir</code>, <code>rename</code>, <code>remove</code>. Include <code>/_anas/base.css</code> for the ANAS look with automatic light / dark.</p>
+    <p>Also: <code>zipUrl</code> (download a folder as zip), <code>stat</code>, <code>exists</code>, <code>readText</code>, <code>readJson</code>, <code>writeJson</code>, <code>listRecursive</code>, <code>mkdir</code>, <code>rename</code>, <code>remove</code>. Include <code>/_anas/base.css</code> for the ANAS look with automatic light / dark.</p>
 
     <h2>4. Installing</h2>
     <ol class="steps">

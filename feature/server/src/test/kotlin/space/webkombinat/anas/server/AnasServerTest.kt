@@ -93,6 +93,48 @@ class AnasServerTest {
         assertEquals(HttpStatusCode.Created, client.put("/api/v1/fs/disk1/file?path=/docs/本.txt&overwrite=1") { setBody("x") }.status)
     }
 
+    private fun unzip(bytes: ByteArray): Map<String, String> {
+        val out = linkedMapOf<String, String>()
+        java.util.zip.ZipInputStream(bytes.inputStream()).use { z ->
+            while (true) {
+                val e = z.nextEntry ?: break
+                out[e.name] = z.readBytes().decodeToString()
+            }
+        }
+        return out
+    }
+
+    @Test
+    fun downloadsFolderAsZip() = test {
+        File(disk, "写真/2026/空").mkdirs()
+        File(disk, "写真/a.txt").writeText("A")
+        File(disk, "写真/2026/b.jpg").writeText("B")
+        File(disk, "写真/.anas-upload-1.part").writeText("途中") // アップロード途中のファイルは入れない
+
+        val res = client.get("/api/v1/fs/disk1/zip?path=/写真")
+        assertEquals(HttpStatusCode.OK, res.status)
+        assertTrue(res.headers[HttpHeaders.ContentDisposition]!!.contains("attachment"))
+        val files = unzip(res.bodyAsBytes())
+        assertEquals(
+            mapOf("写真/2026/b.jpg" to "B", "写真/2026/空/" to "", "写真/a.txt" to "A"),
+            files,
+        )
+
+        assertEquals(HttpStatusCode.BadRequest, client.get("/api/v1/fs/disk1/zip?path=/写真/a.txt").status)
+        assertEquals(HttpStatusCode.NotFound, client.get("/api/v1/fs/disk1/zip?path=/ない").status)
+        // ボリューム全体はボリューム ID の名前になる
+        assertTrue(unzip(client.get("/api/v1/fs/disk1/zip").bodyAsBytes()).keys.all { it.startsWith("disk1/") })
+    }
+
+    @Test
+    fun extensionCanZipItsDataOnly() = test {
+        installJisui()
+        val files = unzip(client.get("/x/jisui/api/zip?path=/books").bodyAsBytes())
+        assertEquals(mapOf("books/a.pdf" to "PDFDATA"), files)
+        val all = unzip(client.get("/x/jisui/api/zip").bodyAsBytes())
+        assertTrue(all.keys.toString(), all.keys.all { it.startsWith("data/") } && "data/books/a.pdf" in all)
+    }
+
     @Test
     fun mkdirRenameDelete() = test {
         suspend fun post(path: String, body: String) = client.post(path) {

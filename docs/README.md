@@ -46,7 +46,7 @@ Google Play Console に入れるプライバシーポリシーの URL：
 1. `docs/` をまるごと新しいリポジトリにコピーする
 2. `img/icon.svg` を差し替える
 3. `ja/` `en/` の各ページで、アプリ名・説明・リポジトリの URL を書き換える
-4. アプリの色に合わせたいときは、`<html lang="ja" style="--accent: #c2185b">` のように `--accent` を上書きする
+4. アプリの色に合わせたいときは、`assets/site.css` の `--accent` `--accent-soft` `--on-accent` を**ライト（`:root`）とダーク（`@media (prefers-color-scheme: dark)`）の両方**で書き換える（`<html style>` で上書きするとダークモードでも同じ色になり、ボタンの文字が読めなくなる）
 
 ### 使える部品（site.css）
 

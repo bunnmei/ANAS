@@ -43,7 +43,7 @@ class FsScope(val volume: String, val base: SafePath, val writable: Boolean) {
 }
 
 /**
- * list / stat / file (GET・PUT) / mkdir / rename / delete。
+ * list / stat / file (GET・PUT) / zip / mkdir / rename / delete。
  * NAS の `/api/v1/fs/{volume}/` と拡張機能の `/x/{id}/api/` の両方で使う。
  */
 fun Route.fsRoutes(
@@ -71,6 +71,23 @@ fun Route.fsRoutes(
         val path = scope.abs(call.request.queryParameters["path"])
         val handle = backend.openRead(scope.volume, path)
         call.respondFile(handle, download = call.request.queryParameters["download"] == "1", sandbox = true)
+    }
+
+    get("zip") {
+        val scope = scopeOf(call)
+        val path = scope.abs(call.request.queryParameters["path"])
+        val dir = backend.stat(scope.volume, path) ?: throw StorageException.NotFound(scope.rel(path))
+        if (!dir.isDir) throw StorageException.NotDirectory(scope.rel(path))
+        val rootName = path.name.ifEmpty { scope.volume }
+        call.response.header(HttpHeaders.CacheControl, "no-cache")
+        call.response.header(
+            HttpHeaders.ContentDisposition,
+            ContentDisposition.Attachment.withParameter(ContentDisposition.Parameters.FileName, "$rootName.zip", encodeValue = true).toString(),
+        )
+        // サイズは作りながらでないと分からないので chunked で送る
+        call.respondOutputStream(ContentType.Application.Zip, HttpStatusCode.OK) {
+            ZipStreamer.write(backend, scope.volume, path, rootName, this)
+        }
     }
 
     put("file") {

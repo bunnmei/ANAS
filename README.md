@@ -10,7 +10,7 @@ Android 端末の **本体ストレージ・SD カード・USB ドライブ** �
 ```
 [PC ブラウザ] ──HTTP (LAN のみ)──▶ [Ktor サーバー（前景サービス）]
                                      ├─ /                NAS の Web UI
-                                     ├─ /api/v1/...      ファイル API（一覧・Range 対応 DL・UP・mkdir・rename・delete）
+                                     ├─ /api/v1/...      ファイル API（一覧・Range 対応 DL・フォルダの ZIP DL・UP・mkdir・rename・delete）
                                      ├─ /x/<id>/         拡張機能の画面（/.<id>/app/）
                                      ├─ /x/<id>/api/...  拡張機能のファイル API（/.<id>/data/ の中だけ）
                                      └─ /_anas/...       SDK・共通 CSS・仕様書
@@ -55,6 +55,10 @@ cd web && npm run typecheck                   # Web UI の型チェックだけ
 
 [spec/EXTENSION_SPEC.md](spec/EXTENSION_SPEC.md) を読んでください（アプリが動いていれば `http://<端末>:8080/_anas/spec.md` でも読めます）。
 最小構成は `/.hello/anas.json`（`{"anas":1,"id":"hello","name":"Hello"}`）と `/.hello/app/index.html` の 2 ファイルです。
+
+## ライセンス
+
+[0BSD](LICENSE)。アプリのアイコンの元データは `icons/` にあります。
 
 ## 自動ビルド (GitHub Actions)
 

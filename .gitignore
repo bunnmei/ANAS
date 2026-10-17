@@ -29,3 +29,6 @@ play-service-account*.json
 *.apk
 node_modules/
 web/dist/
+
+# Android Studio が自動で作る設定（ビルドには不要）
+.idea/

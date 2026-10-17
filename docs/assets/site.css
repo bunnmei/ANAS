@@ -1,6 +1,6 @@
 /*
  * 共通スタイル（どのアプリのサイトにもそのままコピーして使える）
- * アプリごとの色は各ページの <html style="--accent: …"> か、このファイルの :root を上書きする。
+ * アプリごとの色は、このファイルの :root（ライト）と prefers-color-scheme: dark（ダーク）の両方で --accent などを書き換える。
  */
 
 :root {
@@ -11,8 +11,9 @@
   --text: #1f1f1f;
   --muted: #444746;
   --subtle: #5f6368;
-  --accent: #0b57d0;
-  --accent-soft: #d3e3fd;
+  /* ANAS のアイコンに合わせた緑 */
+  --accent: #006d42;
+  --accent-soft: #c9f0d9;
   --on-accent: #ffffff;
   --warn-bg: #fef7e0;
   --warn-border: #f9dc8c;
@@ -36,9 +37,9 @@
     --text: #e3e3e3;
     --muted: #c4c7c5;
     --subtle: #9aa0a6;
-    --accent: #a8c7fa;
-    --accent-soft: #0842a0;
-    --on-accent: #062e6f;
+    --accent: #3ddc84;
+    --accent-soft: #10432b;
+    --on-accent: #00391f;
     --warn-bg: #3a3000;
     --warn-border: #6b5900;
     --code-bg: #1e1f20;

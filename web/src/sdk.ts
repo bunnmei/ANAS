@@ -89,6 +89,8 @@ export interface AnasClient {
   exists(path: string): Promise<boolean>;
   /** ファイルの URL。download: true ならダウンロードさせる */
   fileUrl(path: string, options?: { download?: boolean }): string;
+  /** フォルダを中身ごと zip にしてダウンロードさせる URL（`<a href>` に使う） */
+  zipUrl(path: string): string;
   readText(path: string): Promise<string>;
   readJson<T = unknown>(path: string): Promise<T>;
   readBlob(path: string): Promise<Blob>;
@@ -220,6 +222,9 @@ export function createClientForBase(apiBase: string, id = ""): AnasClient {
     },
     fileUrl(path, options) {
       return url("file", options?.download ? { path, download: "1" } : { path });
+    },
+    zipUrl(path) {
+      return url("zip", { path });
     },
     async readText(path) {
       return (await getFile(path)).text();

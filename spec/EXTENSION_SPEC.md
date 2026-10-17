@@ -143,6 +143,7 @@ SD カードや USB ドライブ（FAT32 / exFAT）でも保存できるよう�
 | `anas.stat(path)` | 1 項目の `Entry`。なければ `AnasError(status 404)` |
 | `anas.exists(path)` | `boolean` |
 | `anas.fileUrl(path, { download? })` | ファイルの URL。`<img src>`・`<iframe src>`・`<video src>`・`<a href>` にそのまま使える。動画のシーク（Range）にも対応 |
+| `anas.zipUrl(path)` | フォルダを中身ごと zip にしてダウンロードさせる URL。`<a href>` に使う（zip の中はフォルダ名から始まる。`/` なら `data/`） |
 | `anas.readText(path)` / `readJson(path)` / `readBlob(path)` | ファイルを読む |
 | `anas.upload(path, blobOrString, options)` | ファイルを書く。`path` は**書き込み先のファイル**のパス。途中のフォルダは自動で作る |
 | `anas.writeText(path, text, options)` / `writeJson(path, value, options)` | テキスト・JSON を書く |
@@ -203,6 +204,7 @@ SDK を使わずに直接呼ぶこともできます。パスはすべてクエ�
 | GET | `/x/<id>/api/list?path=/` | | `{ volume, path, entries: Entry[] }` |
 | GET | `/x/<id>/api/stat?path=/a.pdf` | | `Entry` |
 | GET | `/x/<id>/api/file?path=/a.pdf[&download=1]` | | ファイルの中身（`Range` 対応） |
+| GET | `/x/<id>/api/zip?path=/books` | | フォルダを中身ごと zip にしたもの（`Content-Length` なし、Range 非対応） |
 | PUT | `/x/<id>/api/file?path=/a.pdf[&overwrite=1][&mkdirs=1]` | ファイルの中身そのまま | `201` + `Entry` |
 | POST | `/x/<id>/api/mkdir` | `{"path": "/books"}` | `Entry` |
 | POST | `/x/<id>/api/rename` | `{"path": "/a.pdf", "newName": "b.pdf"}` | `Entry` |

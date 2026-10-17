@@ -232,6 +232,12 @@ async function showFiles(volume: string, path: string): Promise<void> {
         icon("newFolder"),
         "新しいフォルダ",
       ),
+    h(
+      "a",
+      { class: "btn btn--tonal", href: client(volume).zipUrl(path), download: "", title: "このフォルダを中身ごと zip でダウンロード" },
+      icon("zip"),
+      "ZIP でダウンロード",
+    ),
     h("button", { class: "btn btn--text", onclick: reload, title: "再読み込み" }, icon("refresh")),
     h("span", { class: "toolbar__spacer" }),
     h("label", { class: "check" }, hiddenToggle, "隠しファイルを表示"),
@@ -295,7 +301,9 @@ function fileRow(volume: string, e: Entry, canWrite: boolean, reload: () => void
   const actions = h(
     "td",
     { class: "files__actions" },
-    !e.isDir && h("a", { class: "btn btn--icon", href: c.fileUrl(e.path, { download: true }), title: "ダウンロード", download: e.name }, icon("download")),
+    e.isDir
+      ? h("a", { class: "btn btn--icon", href: c.zipUrl(e.path), title: "フォルダごと ZIP でダウンロード", download: "" }, icon("zip"))
+      : h("a", { class: "btn btn--icon", href: c.fileUrl(e.path, { download: true }), title: "ダウンロード", download: e.name }, icon("download")),
     canWrite &&
       h(
         "button",
