@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en" style="--accent: #00696e; --accent-soft: #cce8e9">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ANAS — Guide</title>
+  <meta name="description" content="How to turn an Android device into a NAS with ANAS: adding storage, starting the server, using it from a PC browser, troubleshooting.">
+  <link rel="icon" href="../img/icon.svg">
+  <link rel="alternate" hreflang="ja" href="../ja/guide.html">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap">
+  <link rel="stylesheet" href="../assets/site.css">
+  <script src="../assets/site.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="site-header__inner">
+      <a class="brand" href="./"><img src="../img/icon.svg" alt="">ANAS</a>
+      <nav class="nav">
+        <a href="./">Home</a>
+        <a href="guide.html" aria-current="page">Guide</a>
+        <a href="extension.html">Extensions</a>
+        <a href="privacy.html">Privacy</a>
+      </nav>
+      <a class="lang-switch" href="../ja/guide.html" hreflang="ja" lang="ja" data-set-lang="ja"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zm6.93 6h-2.95a15.65 15.65 0 0 0-1.38-3.56A8.03 8.03 0 0 1 18.92 8zM12 4.04c.83 1.2 1.48 2.53 1.91 3.96h-3.82c.43-1.43 1.08-2.76 1.91-3.96zM4.26 14C4.1 13.36 4 12.69 4 12s.1-1.36.26-2h3.38c-.08.66-.14 1.32-.14 2s.06 1.34.14 2H4.26zm.82 2h2.95c.32 1.25.78 2.45 1.38 3.56A7.99 7.99 0 0 1 5.08 16zm2.95-8H5.08a7.99 7.99 0 0 1 4.33-3.56A15.65 15.65 0 0 0 8.03 8zM12 19.96c-.83-1.2-1.48-2.53-1.91-3.96h3.82c-.43 1.43-1.08 2.76-1.91 3.96zM14.34 14H9.66c-.09-.66-.16-1.32-.16-2s.07-1.35.16-2h4.68c.09.65.16 1.32.16 2s-.07 1.34-.16 2zm.25 5.56c.6-1.11 1.06-2.31 1.38-3.56h2.95a8.03 8.03 0 0 1-4.33 3.56zM16.36 14c.08-.66.14-1.32.14-2s-.06-1.34-.14-2h3.38c.16.64.26 1.31.26 2s-.1 1.36-.26 2h-3.38z"/></svg>日本語</a>
+    </div>
+  </header>
+
+  <main>
+<h1 class="page-title">Guide</h1>
+    <p class="page-meta">ANAS / Android 9 or later</p>
+
+    <div class="summary">
+      <p><strong>Three steps.</strong> Tap "Add storage" → "Start" → open the URL shown (<code>http://192.168.x.x:8080</code>) in a browser on your PC.</p>
+    </div>
+
+    <nav class="toc" aria-label="Contents">
+      <div class="toc__title">On this page</div>
+      <ol>
+        <li><a href="#storage">Add storage</a></li>
+        <li><a href="#start">Start the server</a></li>
+        <li><a href="#browser">Use it from a PC browser</a></li>
+        <li><a href="#settings">Settings</a></li>
+        <li><a href="#trouble">Troubleshooting</a></li>
+      </ol>
+    </nav>
+
+    <h2 id="storage">1. Add storage</h2>
+    <ol class="steps">
+      <li><strong>Tap "Add storage" on the Home tab</strong>Android's folder picker opens.</li>
+      <li><strong>Pick the folder to share</strong>Use the ☰ menu to switch between internal storage, SD card and USB drives. For SD cards and USB drives you can pick the top level.</li>
+      <li><strong>Tap "Use this folder" → "Allow"</strong>The folder stays available after restarting the app.</li>
+    </ol>
+    <div class="callout callout--warn">
+      <span class="callout__title">The top of internal storage can't be picked</span>
+      <p>Since Android 11 the top of internal storage and the <code>Download</code> folder can't be picked. Create a folder such as "NAS" in the picker and choose it.</p>
+    </div>
+    <p>You can register several storages; in the web UI they appear as <code>disk1</code>, <code>disk2</code>, … If you unplug a USB drive it is shown as "not connected" and works again once plugged back in.</p>
+
+    <h2 id="start">2. Start the server</h2>
+    <ol class="steps">
+      <li><strong>Tap "Start"</strong>On Android 13+ you are asked for the notification permission. The notification has a "Stop" button.</li>
+      <li><strong>Check the URL</strong>A URL like <code>http://192.168.1.10:8080</code> is shown, with copy and "open in browser" buttons.</li>
+    </ol>
+    <p>The server keeps running with the screen off or the app closed (foreground service). Stop it from the app or the notification.</p>
+
+    <h2 id="browser">3. Use it from a PC browser</h2>
+    <p>Connect the PC to the <strong>same Wi-Fi / LAN</strong> and open the URL.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>To…</th><th>Do</th></tr></thead>
+        <tbody>
+          <tr><td>Upload</td><td>"Upload" / "Whole folder" buttons, or drag files and folders onto the page</td></tr>
+          <tr><td>Open / download</td><td>Click a name to open it in the browser (PDF, images, video…); ↓ downloads</td></tr>
+          <tr><td>Rename / delete</td><td>The ✎ and 🗑 buttons on each row</td></tr>
+          <tr><td>Hidden files</td><td>Tick "show hidden files" (names starting with <code>.</code>)</td></tr>
+          <tr><td>Extensions</td><td>"Extensions" at the top, or "Open dedicated view" when you open such a folder</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>The web UI is currently in Japanese.</p>
+
+    <h2 id="settings">4. Settings</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Item</th><th>Meaning</th></tr></thead>
+        <tbody>
+          <tr><td>Theme</td><td>System / light / dark</td></tr>
+          <tr><td>Port</td><td>8080 by default, 1024–65535. Applied when the server restarts</td></tr>
+          <tr><td>Access password</td><td>When set, browsers must log in. Empty means no password</td></tr>
+          <tr><td>Read-only mode</td><td>Blocks uploads, deletes and renames</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="trouble">5. Troubleshooting</h2>
+    <details>
+      <summary>The PC can't open the URL</summary>
+      <p>Make sure both are on the same network. Guest Wi-Fi and routers with "AP isolation" block device-to-device traffic. Mobile data (4G / 5G) does not work.</p>
+    </details>
+    <details>
+      <summary>"Port 8080 is in use"</summary>
+      <p>Another app uses the port. Change it in Settings and start again.</p>
+    </details>
+    <details>
+      <summary>A USB drive shows "not connected"</summary>
+      <p>It was unplugged or went to sleep. Plug it back in and reopen Home. If permission was lost, remove it and add it again.</p>
+    </details>
+    <details>
+      <summary>Files over 4 GB fail to upload</summary>
+      <p>FAT32 cards and drives are limited to 4 GB per file. Format them as exFAT.</p>
+    </details>
+    <details>
+      <summary>Some file names are rejected</summary>
+      <p>So that files also fit on SD cards and USB drives, names containing <code>\ : * ? " &lt; &gt; |</code> or ending in a space or period are not allowed.</p>
+    </details>
+  </main>
+
+  <footer class="site-footer">
+    <div class="site-footer__inner">
+      <span class="copyright">© 2026 bunnmei</span>
+      <a href="guide.html">Guide</a>
+      <a href="extension.html">Extensions</a>
+      <a href="privacy.html">Privacy</a>
+      <a href="https://github.com/bunnmei/ANAS">GitHub</a>
+    </div>
+  </footer>
+</body>
+</html>

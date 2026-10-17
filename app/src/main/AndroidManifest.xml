@@ -4,14 +4,16 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
-        android:maxSdkVersion="32" />
-
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <!-- Android 17+ (targetSdk 37): PC から LAN 経由で接続を受けるのに必要 -->
+    <uses-permission android:name="android.permission.ACCESS_LOCAL_NETWORK" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
-        android:name=".di.DiApp"
+        android:name=".AnasApp"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -23,7 +25,7 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:label="@string/app_name"
+            android:windowSoftInputMode="adjustResize"
             android:theme="@style/Theme.ANAS">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -32,12 +34,18 @@
             </intent-filter>
         </activity>
 
-
+        <!--
+          NAS は何時間も動かし続けるので、dataSync（Android 15+ で 1 日 6 時間まで）ではなく specialUse にする。
+          Google Play で配布する場合は Play Console で用途の申告が必要。
+        -->
         <service
-            android:name=".server.ServerService"
-            android:foregroundServiceType="dataSync|connectedDevice"
-            />
-
+            android:name=".service.NasService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Serves the user's own files to devices on the same local network (personal NAS)." />
+        </service>
     </application>
 
 </manifest>

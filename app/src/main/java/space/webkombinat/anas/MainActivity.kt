@@ -4,23 +4,25 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import org.koin.android.ext.android.inject
-import space.webkombinat.anas.data.UITheme
-import space.webkombinat.anas.data.UserPreferencesRepository
-import space.webkombinat.anas.ui.theme.ANASTheme
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dagger.hilt.android.AndroidEntryPoint
+import space.webkombinat.anas.data.SettingsRepository
+import space.webkombinat.anas.ui.AppRoot
+import space.webkombinat.anas.ui.theme.AnasTheme
+import javax.inject.Inject
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    @Inject lateinit var settings: SettingsRepository
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        val userPref: UserPreferencesRepository by inject()
-
         enableEdgeToEdge()
         setContent {
-            val theme by userPref.isTheme.collectAsState(UITheme.SYSTEM.theme)
-            ANASTheme(darkTheme = theme == UITheme.DARK.theme) {
+            val current by settings.settings.collectAsStateWithLifecycle()
+            AnasTheme(mode = current.theme) {
                 AppRoot()
             }
         }

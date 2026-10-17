@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bunnmei.github.io/ANAS/anas.schema.json",
+  "title": "ANAS 拡張機能マニフェスト (anas.json)",
+  "type": "object",
+  "required": ["anas", "id", "name"],
+  "properties": {
+    "anas": {
+      "description": "仕様のバージョン。今は 1 だけ",
+      "const": 1
+    },
+    "id": {
+      "description": "拡張機能の ID。フォルダ名は必ず \".\" + id にする（例: id が jisui ならフォルダは /.jisui/）",
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$"
+    },
+    "name": {
+      "description": "表示名",
+      "type": "string",
+      "minLength": 1
+    },
+    "version": {
+      "description": "拡張機能のバージョン（表示用）",
+      "type": "string",
+      "default": "0.0.0"
+    },
+    "description": {
+      "description": "説明（表示用）",
+      "type": "string",
+      "default": ""
+    },
+    "icon": {
+      "description": "app/ フォルダからの相対パス（例: icon.svg）",
+      "type": "string"
+    },
+    "scope": {
+      "description": "self: data/ の中だけ読み書きできる（既定）。all: NAS 全体の API も使える（アプリで許可したときだけ）",
+      "enum": ["self", "all"],
+      "default": "self"
+    },
+    "externalOrigins": {
+      "description": "読み込みや通信を許可する外部オリジン（例: https://cdn.jsdelivr.net）。既定は外部通信なし",
+      "type": "array",
+      "items": { "type": "string", "pattern": "^https://[A-Za-z0-9.-]+(:[0-9]{1,5})?$" },
+      "default": []
+    }
+  }
+}

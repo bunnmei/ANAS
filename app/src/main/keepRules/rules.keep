@@ -1,0 +1,3 @@
+# Ktor がデバッガ検出に使う JVM 専用クラス（Android にはない）
+-dontwarn java.lang.management.ManagementFactory
+-dontwarn java.lang.management.RuntimeMXBean

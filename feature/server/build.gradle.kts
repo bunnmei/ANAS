@@ -1,45 +1,28 @@
+// Ktor の HTTP サーバー。Android に依存しないので testApplication で丸ごとテストできる
 plugins {
-    id("java-library")
-    alias(libs.plugins.jetbrains.kotlin.jvm)
-    alias(libs.plugins.kotlinSerialization)
+    alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.kotlin.serialization)
 }
+
 java {
-    sourceCompatibility = JavaVersion.VERSION_11
-    targetCompatibility = JavaVersion.VERSION_11
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
 }
+
 kotlin {
     compilerOptions {
-        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11
+        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
     }
 }
 
 dependencies {
-
-    implementation(project(":feature:core"))
-
-    // *0を参照
-    val ex_group = "org.jetbrains.kotlin"
-    val ex_module = "kotlin-stdlib-jdk8"
-
-    implementation(libs.ktor.server.core) {exclude(group = ex_group, ex_module)}
-    //エンジン 色々ある nettyが一番普及してるらしい
-    implementation(libs.ktor.server.netty) {exclude(group = ex_group, ex_module)}
-    //HTML を Kotlin DSL で生成できる *1を参照
-    implementation(libs.ktor.server.html.builder) {exclude(group = ex_group, ex_module)}
-    // JSON シリアライザ ex: kotlinx.serialization ,gsonを使う場合に必要なよう
-    implementation(libs.ktor.server.content.negotiation) {exclude(group = ex_group, ex_module)}
-    implementation(libs.ktor.server.cors) {exclude(group = ex_group, ex_module)}
-    implementation(libs.ktor.serialization.kotlinx.json) {exclude(group = ex_group, ex_module)}
+    api(project(":core:model"))
+    implementation(libs.ktor.server.core)
+    implementation(libs.ktor.server.cio)
+    implementation(libs.ktor.server.content.negotiation)
+    implementation(libs.ktor.server.status.pages)
+    implementation(libs.ktor.serialization.kotlinx.json)
+    testImplementation(libs.junit)
+    testImplementation(libs.ktor.server.test.host)
+    testImplementation(libs.kotlinx.coroutines.test)
 }
-
-// *0
-// exclude(group = ex_group, ex_module)
-// 重複依存 が発生しないようにするためらしい
-
-// *1
-// call.respondHtml {
-//     head { title("My Server") }
-//     body {
-//         h1 { +"Hello" }
-//     }
-// }

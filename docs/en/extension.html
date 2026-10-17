@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en" style="--accent: #00696e; --accent-soft: #cce8e9">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ANAS — Extensions (special folders)</title>
+  <meta name="description" content="How to build ANAS extensions: put anas.json and HTML / CSS / JS in a ".name" folder at the top of a storage and it becomes a web app dedicated to that folder.">
+  <link rel="icon" href="../img/icon.svg">
+  <link rel="alternate" hreflang="ja" href="../ja/extension.html">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap">
+  <link rel="stylesheet" href="../assets/site.css">
+  <script src="../assets/site.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="site-header__inner">
+      <a class="brand" href="./"><img src="../img/icon.svg" alt="">ANAS</a>
+      <nav class="nav">
+        <a href="./">Home</a>
+        <a href="guide.html">Guide</a>
+        <a href="extension.html" aria-current="page">Extensions</a>
+        <a href="privacy.html">Privacy</a>
+      </nav>
+      <a class="lang-switch" href="../ja/extension.html" hreflang="ja" lang="ja" data-set-lang="ja"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zm6.93 6h-2.95a15.65 15.65 0 0 0-1.38-3.56A8.03 8.03 0 0 1 18.92 8zM12 4.04c.83 1.2 1.48 2.53 1.91 3.96h-3.82c.43-1.43 1.08-2.76 1.91-3.96zM4.26 14C4.1 13.36 4 12.69 4 12s.1-1.36.26-2h3.38c-.08.66-.14 1.32-.14 2s.06 1.34.14 2H4.26zm.82 2h2.95c.32 1.25.78 2.45 1.38 3.56A7.99 7.99 0 0 1 5.08 16zm2.95-8H5.08a7.99 7.99 0 0 1 4.33-3.56A15.65 15.65 0 0 0 8.03 8zM12 19.96c-.83-1.2-1.48-2.53-1.91-3.96h3.82c-.43 1.43-1.08 2.76-1.91 3.96zM14.34 14H9.66c-.09-.66-.16-1.32-.16-2s.07-1.35.16-2h4.68c.09.65.16 1.32.16 2s-.07 1.34-.16 2zm.25 5.56c.6-1.11 1.06-2.31 1.38-3.56h2.95a8.03 8.03 0 0 1-4.33 3.56zM16.36 14c.08-.66.14-1.32.14-2s-.06-1.34-.14-2h3.38c.16.64.26 1.31.26 2s-.1 1.36-.26 2h-3.38z"/></svg>日本語</a>
+    </div>
+  </header>
+
+  <main>
+<h1 class="page-title">Extensions (special folders)</h1>
+    <p class="page-meta">ANAS / spec version 1</p>
+
+    <div class="summary">
+      <p><strong>Give a folder its own UI.</strong> Create a folder such as <code>.jisui/</code> at the top of a storage, add <code>anas.json</code> and some HTML / CSS / JS, and a web app for that folder runs at <code>http://device:8080/x/jisui/</code>.</p>
+    </div>
+
+    <div class="callout">
+      <span class="callout__title">Full specification</span>
+      <p>All rules, the HTTP API, error codes and the CSP are in <a href="https://github.com/bunnmei/ANAS/blob/main/spec/EXTENSION_SPEC.md">spec/EXTENSION_SPEC.md</a> (Japanese). A running device also serves it at <code>/_anas/spec.md</code>, with SDK types at <code>/_anas/sdk.d.ts</code>.</p>
+    </div>
+
+    <h2>1. Folder layout</h2>
+<pre><code>/.jisui/              ← "." + id, at the top of a storage
+  anas.json           ← manifest (required)
+  app/                ← UI (index.html is the entry), served at /x/jisui/
+  data/               ← data; the SDK can only read and write here
+</code></pre>
+
+    <h2>2. anas.json</h2>
+<pre><code>{ "anas": 1, "id": "jisui", "name": "Scanned books", "version": "1.0.0", "icon": "icon.svg" }</code></pre>
+    <p><code>id</code> uses lowercase letters, digits, <code>_</code> and <code>-</code>, and the folder name must be <code>.</code> + id. <code>scope: "all"</code> asks for access to the whole NAS, which the user must allow in the app. <code>externalOrigins</code> lists CDNs you load from; by default nothing external is allowed.</p>
+
+    <h2>3. SDK</h2>
+<pre><code>&lt;script type="module"&gt;
+  import { anas, joinPath } from "/_anas/sdk.js";
+  const entries = await anas.list("/");
+  img.src = anas.fileUrl("/covers/a.jpg");
+  await anas.upload(joinPath("/books", file.name), file, { onProgress: (d, t) =&gt; console.log(d / t) });
+&lt;/script&gt;</code></pre>
+    <p>Also: <code>stat</code>, <code>exists</code>, <code>readText</code>, <code>readJson</code>, <code>writeJson</code>, <code>listRecursive</code>, <code>mkdir</code>, <code>rename</code>, <code>remove</code>. Include <code>/_anas/base.css</code> for the ANAS look with automatic light / dark.</p>
+
+    <h2>4. Installing</h2>
+    <ol class="steps">
+      <li><strong>From a zip</strong>Web UI → "Extensions" → "Install from zip". Existing files in data/ are kept.</li>
+      <li><strong>Upload the folder</strong>At the top of a storage use "Whole folder" to upload <code>.jisui</code>, then "Rescan".</li>
+      <li><strong>Create a template in the app</strong>"Extensions" tab → "Create".</li>
+    </ol>
+
+    <h2>5. Samples</h2>
+    <div class="cards">
+      <div class="card">
+        <h3>Book shelf (.jisui)</h3>
+        <p>Shelve scanned PDFs and image folders, with generated covers, two-page / right-to-left reading, reading position and drag &amp; drop from a PC.</p>
+      </div>
+      <div class="card">
+        <h3>KiCad library (.kicad_symbol_footprint)</h3>
+        <p>Organise .kicad_sym, .kicad_mod and 3D models, preview them as SVG and download single symbols.</p>
+      </div>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="site-footer__inner">
+      <span class="copyright">© 2026 bunnmei</span>
+      <a href="guide.html">Guide</a>
+      <a href="extension.html">Extensions</a>
+      <a href="privacy.html">Privacy</a>
+      <a href="https://github.com/bunnmei/ANAS">GitHub</a>
+    </div>
+  </footer>
+</body>
+</html>

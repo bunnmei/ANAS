@@ -1,0 +1,13 @@
+{
+  "name": "anas-web",
+  "private": true,
+  "type": "module",
+  "description": "ANAS の NAS Web UI と拡張機能用 SDK（フレームワークなしの TypeScript）",
+  "scripts": {
+    "build": "node build.mjs ../app/build/generated/webAssets/web",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "devDependencies": {
+    "typescript": "7.0.2"
+  }
+}

@@ -1,0 +1,69 @@
+# push / PR のたびに Android アプリと Web UI をビルド・検査する
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  android:
+    name: Android (lint / unit test / debug APK)
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 25 # gradle/gradle-daemon-jvm.properties の toolchainVersion に合わせる
+
+      # web/（NAS の Web UI と拡張機能 SDK）を TypeScript でビルドするのに使う
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install web dependencies
+        run: npm ci --no-audit --no-fund
+        working-directory: web
+
+      - name: Type-check web
+        run: npm run typecheck
+        working-directory: web
+
+      - uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-read-only: ${{ github.event_name == 'pull_request' }}
+
+      - name: Build
+        run: ./gradlew lintDebug test testDebugUnitTest assembleDebug
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: app-debug
+          path: app/build/outputs/apk/debug/*.apk
+          retention-days: 14
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: android-reports
+          path: |
+            */build/reports/
+            */*/build/reports/
+            */build/test-results/
+            */*/build/test-results/
+          retention-days: 14

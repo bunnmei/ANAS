@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="ja" style="--accent: #00696e; --accent-soft: #cce8e9">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ANAS — Android を自宅の NAS に</title>
+  <meta name="description" content="Android 端末の本体ストレージ・SD カード・USB ドライブを、同じ LAN の PC からブラウザで使える NAS にするアプリ。フォルダごとに専用の Web 画面（拡張機能）も作れます。">
+  <link rel="icon" href="../img/icon.svg">
+  <link rel="alternate" hreflang="en" href="../en/">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap">
+  <link rel="stylesheet" href="../assets/site.css">
+  <script src="../assets/site.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="site-header__inner">
+      <a class="brand" href="./"><img src="../img/icon.svg" alt="">ANAS</a>
+      <nav class="nav">
+        <a href="./" aria-current="page">ホーム</a>
+        <a href="guide.html">使い方</a>
+        <a href="extension.html">拡張機能</a>
+        <a href="privacy.html">プライバシー</a>
+      </nav>
+      <a class="lang-switch" href="../en/" hreflang="en" lang="en" data-set-lang="en"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zm6.93 6h-2.95a15.65 15.65 0 0 0-1.38-3.56A8.03 8.03 0 0 1 18.92 8zM12 4.04c.83 1.2 1.48 2.53 1.91 3.96h-3.82c.43-1.43 1.08-2.76 1.91-3.96zM4.26 14C4.1 13.36 4 12.69 4 12s.1-1.36.26-2h3.38c-.08.66-.14 1.32-.14 2s.06 1.34.14 2H4.26zm.82 2h2.95c.32 1.25.78 2.45 1.38 3.56A7.99 7.99 0 0 1 5.08 16zm2.95-8H5.08a7.99 7.99 0 0 1 4.33-3.56A15.65 15.65 0 0 0 8.03 8zM12 19.96c-.83-1.2-1.48-2.53-1.91-3.96h3.82c-.43 1.43-1.08 2.76-1.91 3.96zM14.34 14H9.66c-.09-.66-.16-1.32-.16-2s.07-1.35.16-2h4.68c.09.65.16 1.32.16 2s-.07 1.34-.16 2zm.25 5.56c.6-1.11 1.06-2.31 1.38-3.56h2.95a8.03 8.03 0 0 1-4.33 3.56zM16.36 14c.08-.66.14-1.32.14-2s-.06-1.34-.14-2h3.38c.16.64.26 1.31.26 2s-.1 1.36-.26 2h-3.38z"/></svg>English</a>
+    </div>
+  </header>
+
+  <main>
+<section class="hero">
+      <img class="hero__icon" src="../img/icon.svg" alt="">
+      <h1>使っていない Android を、<br>自分だけの NAS に。</h1>
+      <p>本体ストレージ・SD カード・USB ドライブを、同じ Wi-Fi / LAN の PC からブラウザで読み書きできます。<br>PC に追加のソフトは要りません。</p>
+      <div class="actions">
+        <a class="btn" href="guide.html">使い方を見る</a>
+        <a class="btn btn--tonal" href="https://github.com/bunnmei/ANAS">GitHub</a>
+      </div>
+    </section>
+
+    <h2>特徴</h2>
+    <div class="cards">
+      <div class="card">
+        <h3>ブラウザだけで使える</h3>
+        <p>アップロード（フォルダごと・ドラッグ＆ドロップ）、ダウンロード、名前の変更、削除。動画の途中から再生にも対応。</p>
+      </div>
+      <div class="card">
+        <h3>SD カードと USB ドライブ</h3>
+        <p>USB ハブ経由の SSD や USB メモリもそのまま使えます。4GB を超えるファイルも扱えます（exFAT など）。</p>
+      </div>
+      <div class="card">
+        <h3>フォルダ専用の画面（拡張機能）</h3>
+        <p><code>/.jisui/</code> のようなフォルダに HTML / CSS / JS を置くと、そのフォルダ専用の Web アプリになります。</p>
+      </div>
+      <div class="card">
+        <h3>LAN の中だけ</h3>
+        <p>同じネットワークのプライベート IP からだけ接続できます。任意でパスワードも設定できます。</p>
+      </div>
+    </div>
+
+    <h2>必要なもの</h2>
+    <ul>
+      <li><strong>Android 9 以降</strong>の端末</li>
+      <li>端末と<strong>同じ Wi-Fi / LAN</strong>につながった PC（ブラウザがあれば OS は問いません）</li>
+      <li>必要に応じて SD カードや USB ドライブ（USB OTG / USB ハブ）</li>
+    </ul>
+
+    <h2>ページ一覧</h2>
+    <div class="cards">
+      <a class="card" href="guide.html">
+        <h3>使い方</h3>
+        <p>ストレージの追加、サーバーの開始、PC からの使い方、困ったときは。</p>
+      </a>
+      <a class="card" href="extension.html">
+        <h3>拡張機能（特殊フォルダ）</h3>
+        <p>フォルダ専用の画面の作り方。AI に渡せる仕様書とサンプル。</p>
+      </a>
+      <a class="card" href="privacy.html">
+        <h3>プライバシーポリシー</h3>
+        <p>ファイルや権限をどう扱っているか。</p>
+      </a>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="site-footer__inner">
+      <span class="copyright">© 2026 bunnmei</span>
+      <a href="guide.html">使い方</a>
+      <a href="extension.html">拡張機能</a>
+      <a href="privacy.html">プライバシー</a>
+      <a href="https://github.com/bunnmei/ANAS">GitHub</a>
+    </div>
+  </footer>
+</body>
+</html>

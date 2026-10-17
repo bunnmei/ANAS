@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ANAS</title>
+  <link rel="icon" href="favicon.svg">
+  <link rel="stylesheet" href="/_anas/base.css">
+  <link rel="stylesheet" href="/style.css">
+  <script type="module" src="/main.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#/"><img src="favicon.svg" alt="">ANAS</a>
+    <nav id="nav" class="nav" aria-label="ストレージ"></nav>
+    <span id="readonly" class="anas-badge" hidden>読み取り専用</span>
+    <button id="logout" class="btn btn--text" hidden>ログアウト</button>
+  </header>
+  <main id="main" class="anas-container"></main>
+  <section id="uploads" class="uploads" hidden aria-label="アップロード">
+    <h2>アップロード</h2>
+    <div id="uploads-list"></div>
+  </section>
+  <div id="drop" class="drop" hidden>ここにドロップしてアップロード</div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+</body>
+</html>

@@ -1,0 +1,114 @@
+/*
+ * ANAS の共通スタイル。拡張機能からも <link rel="stylesheet" href="/_anas/base.css"> で使える。
+ * - 色は CSS 変数（--anas-*）。ライト/ダークは OS の設定で自動切替
+ * - 部品のクラスは anas- で始まる（拡張機能の CSS とぶつからないように）
+ */
+:root {
+  color-scheme: light dark;
+  --anas-bg: #f7f9f9;
+  --anas-surface: #ffffff;
+  --anas-surface-2: #eef3f3;
+  --anas-text: #172022;
+  --anas-muted: #5b6769;
+  --anas-border: #d5dfe0;
+  --anas-accent: #00696e;
+  --anas-accent-text: #ffffff;
+  --anas-accent-soft: #cce8e9;
+  --anas-danger: #ba1a1a;
+  --anas-radius: 12px;
+  --anas-shadow: 0 1px 3px rgb(0 0 0 / 0.08), 0 4px 12px rgb(0 0 0 / 0.04);
+  --anas-font: system-ui, -apple-system, "Segoe UI", "Hiragino Sans", "Noto Sans JP", sans-serif;
+  --anas-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --anas-bg: #0f1415;
+    --anas-surface: #182022;
+    --anas-surface-2: #212b2d;
+    --anas-text: #dee4e4;
+    --anas-muted: #9aa6a8;
+    --anas-border: #313d3f;
+    --anas-accent: #4cd9e0;
+    --anas-accent-text: #00373a;
+    --anas-accent-soft: #1f4d50;
+    --anas-danger: #ffb4ab;
+    --anas-shadow: 0 1px 3px rgb(0 0 0 / 0.4);
+  }
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+/* display を指定したクラスより hidden 属性を優先する */
+[hidden] { display: none !important; }
+
+body {
+  margin: 0;
+  background: var(--anas-bg);
+  color: var(--anas-text);
+  font-family: var(--anas-font);
+  line-height: 1.6;
+  -webkit-text-size-adjust: 100%;
+}
+
+a { color: var(--anas-accent); }
+code, kbd, pre { font-family: var(--anas-mono); }
+
+.anas-container { max-width: 1100px; margin: 0 auto; padding: 16px; }
+
+.anas-header {
+  position: sticky; top: 0; z-index: 10;
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 10px 16px;
+  background: var(--anas-surface);
+  border-bottom: 1px solid var(--anas-border);
+}
+.anas-header h1 { font-size: 1.1rem; margin: 0; }
+
+.anas-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: 36px; padding: 6px 16px;
+  border: 0; border-radius: 999px;
+  background: var(--anas-accent); color: var(--anas-accent-text);
+  font: inherit; font-weight: 600; text-decoration: none; cursor: pointer;
+}
+.anas-btn:hover { filter: brightness(1.08); }
+.anas-btn:disabled { opacity: 0.45; cursor: default; filter: none; }
+.anas-btn--tonal { background: var(--anas-accent-soft); color: var(--anas-text); }
+.anas-btn--text { background: transparent; color: var(--anas-accent); }
+.anas-btn--danger { background: transparent; color: var(--anas-danger); }
+.anas-btn--icon { padding: 6px; min-width: 36px; background: transparent; color: var(--anas-muted); }
+
+.anas-card {
+  background: var(--anas-surface);
+  border: 1px solid var(--anas-border);
+  border-radius: var(--anas-radius);
+  box-shadow: var(--anas-shadow);
+  padding: 16px;
+}
+
+.anas-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 16px; }
+.anas-toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
+.anas-muted { color: var(--anas-muted); }
+.anas-error { color: var(--anas-danger); }
+.anas-empty { padding: 48px 16px; text-align: center; color: var(--anas-muted); }
+
+.anas-input, .anas-container input[type="text"], .anas-container input[type="search"], .anas-container select {
+  min-height: 36px; padding: 6px 12px;
+  border: 1px solid var(--anas-border); border-radius: 8px;
+  background: var(--anas-surface); color: var(--anas-text); font: inherit;
+}
+
+.anas-dropzone {
+  border: 2px dashed var(--anas-border); border-radius: var(--anas-radius);
+  padding: 24px; text-align: center; color: var(--anas-muted);
+  transition: background 0.15s, border-color 0.15s;
+}
+.anas-dropzone.is-over { border-color: var(--anas-accent); background: var(--anas-accent-soft); color: var(--anas-text); }
+
+progress { accent-color: var(--anas-accent); }
+
+.anas-badge {
+  display: inline-block; padding: 0 8px; border-radius: 999px;
+  background: var(--anas-surface-2); color: var(--anas-muted); font-size: 0.8rem;
+}

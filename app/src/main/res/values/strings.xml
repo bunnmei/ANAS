@@ -1,11 +1,73 @@
 <resources>
     <string name="app_name">ANAS</string>
-    <string name="system">システム</string>
-    <string name="dark">ダーク</string>
-    <string name="light">ライト</string>
+
+    <string name="tab_home">ホーム</string>
+    <string name="tab_extensions">拡張</string>
+    <string name="tab_settings">設定</string>
+
+    <string name="server">サーバー</string>
+    <string name="server_running">起動中</string>
+    <string name="server_starting">起動しています…</string>
+    <string name="server_stopped">停止中</string>
+    <string name="server_start">開始</string>
+    <string name="server_stop">停止</string>
+    <string name="server_no_storage">先にストレージを追加してください</string>
+    <string name="server_open_hint">PC のブラウザで次の URL を開いてください（同じ Wi-Fi / LAN）</string>
+    <string name="server_no_address">Wi-Fi などのネットワークに接続していません</string>
+    <string name="copy">コピー</string>
+    <string name="copied">コピーしました</string>
+    <string name="open_in_browser">ブラウザで開く</string>
+
+    <string name="storage">ストレージ</string>
+    <string name="storage_add">ストレージを追加</string>
+    <string name="storage_empty">まだストレージがありません。「ストレージを追加」で、NAS として公開するフォルダ（本体のフォルダ・SD カード・USB ドライブ）を選んでください。</string>
+    <string name="storage_hint">Android の制限で、本体ストレージの一番上・Download フォルダは選べません。本体を使うときは「NAS」などのフォルダを作って選んでください。SD カードと USB ドライブは一番上を選べます。</string>
+    <string name="storage_offline">接続されていません</string>
+    <string name="storage_readonly">読み取り専用</string>
+    <string name="storage_free">空き %1$s / %2$s</string>
+    <string name="storage_remove">登録を解除</string>
+    <string name="storage_remove_confirm">「%1$s」の登録を解除しますか？ファイルは削除されません。</string>
+    <string name="cancel">キャンセル</string>
+    <string name="remove">解除</string>
+
+    <string name="extensions_title">拡張機能（特殊フォルダ）</string>
+    <string name="extensions_desc">ストレージ直下の「.名前」フォルダに anas.json があると、そのフォルダ専用の Web 画面が使えます。</string>
+    <string name="extensions_empty">拡張機能はまだありません。PC から zip をアップロードするか、下のボタンでひな形を作ってください。</string>
+    <string name="extensions_rescan">再スキャン</string>
+    <string name="extensions_create">新しく作る</string>
+    <string name="extensions_spec">仕様書を開く</string>
+    <string name="extension_full_access">NAS 全体へのアクセスを許可</string>
+    <string name="extension_full_access_desc">この拡張機能は data フォルダの外も読み書きしようとしています。信頼できるものだけ許可してください。</string>
+    <string name="extension_open">開く</string>
+    <string name="extension_error">エラー: %1$s</string>
+    <string name="extension_server_needed">開くにはサーバーを開始してください</string>
+    <string name="create_extension_title">拡張機能のひな形を作る</string>
+    <string name="create_extension_id">ID（英小文字・数字・_ -）</string>
+    <string name="create_extension_name">表示名</string>
+    <string name="create_extension_volume">作成先</string>
+    <string name="create">作成</string>
+
+    <string name="settings_appearance">表示</string>
     <string name="theme">テーマ</string>
-    <string name="selectFolder">ドライブフォルダを選択</string>
-    <string name="startServer">サーバースタート</string>
-    <string name="selectedFolderStatus">選択済みフォルダステータス</string>
-    <string name="stopServer">サーバーストップ</string>
+    <string name="theme_system">システムに合わせる</string>
+    <string name="theme_light">ライト</string>
+    <string name="theme_dark">ダーク</string>
+    <string name="settings_server">サーバー</string>
+    <string name="port">ポート番号</string>
+    <string name="port_invalid">1024〜65535 の数字にしてください</string>
+    <string name="password">アクセスパスワード</string>
+    <string name="password_desc">設定すると、ブラウザでログインが必要になります。空にするとパスワードなし。</string>
+    <string name="password_set">設定済み</string>
+    <string name="password_none">なし</string>
+    <string name="save">保存</string>
+    <string name="read_only">読み取り専用モード</string>
+    <string name="read_only_desc">アップロード・削除・名前の変更をすべて禁止します</string>
+    <string name="restart_needed">サーバーの再起動後に反映されます</string>
+    <string name="settings_about">このアプリについて</string>
+    <string name="version">バージョン</string>
+    <string name="docs">使い方（Web サイト）</string>
+
+    <string name="notification_channel">NAS サーバー</string>
+    <string name="notification_running">%1$s で公開中</string>
+    <string name="notification_starting">起動しています…</string>
 </resources>

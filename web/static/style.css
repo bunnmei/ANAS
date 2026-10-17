@@ -1,0 +1,132 @@
+/* NAS の Web UI 用。色は base.css の変数を使う */
+
+.icon { width: 20px; height: 20px; fill: currentColor; flex: none; }
+
+.topbar {
+  position: sticky; top: 0; z-index: 10;
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 16px;
+  background: var(--anas-surface);
+  border-bottom: 1px solid var(--anas-border);
+  overflow-x: auto;
+}
+.brand { display: flex; align-items: center; gap: 8px; font-weight: 700; color: var(--anas-text); text-decoration: none; margin-right: 8px; }
+.brand img { width: 28px; height: 28px; }
+.nav { display: flex; gap: 4px; flex: 1; }
+.nav__item {
+  display: flex; align-items: center; gap: 6px; white-space: nowrap;
+  padding: 6px 12px; border-radius: 999px;
+  color: var(--anas-muted); text-decoration: none;
+}
+.nav__item[aria-current="page"] { background: var(--anas-accent-soft); color: var(--anas-text); font-weight: 600; }
+.nav__item--offline { opacity: 0.5; }
+
+h1 { font-size: 1.4rem; margin: 8px 0; }
+.muted { color: var(--anas-muted); }
+.small { font-size: 0.85rem; }
+.mono { font-family: var(--anas-mono); }
+.error { color: var(--anas-danger); }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: 36px; padding: 6px 16px;
+  border: 0; border-radius: 999px;
+  background: var(--anas-accent); color: var(--anas-accent-text);
+  font: inherit; font-weight: 600; text-decoration: none; cursor: pointer; white-space: nowrap;
+}
+.btn:hover { filter: brightness(1.08); }
+.btn--tonal { background: var(--anas-accent-soft); color: var(--anas-text); }
+.btn--text { background: transparent; color: var(--anas-accent); }
+.btn--icon { padding: 6px; min-width: 36px; background: transparent; color: var(--anas-muted); }
+.btn--icon:hover { background: var(--anas-surface-2); }
+.btn--danger:hover { color: var(--anas-danger); }
+
+.toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
+.toolbar__spacer { flex: 1; }
+.check { display: inline-flex; align-items: center; gap: 6px; color: var(--anas-muted); }
+select { min-height: 36px; padding: 4px 8px; border-radius: 8px; border: 1px solid var(--anas-border); background: var(--anas-surface); color: var(--anas-text); font: inherit; }
+
+.crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; font-size: 1.05rem; margin-top: 8px; }
+.crumbs a { color: var(--anas-text); text-decoration: none; padding: 2px 6px; border-radius: 6px; }
+.crumbs a:hover { background: var(--anas-surface-2); }
+.crumbs a:last-child { font-weight: 700; }
+.crumbs__sep { color: var(--anas-muted); }
+
+.banner {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 12px 16px; margin: 8px 0 16px;
+  border-radius: var(--anas-radius);
+  background: var(--anas-accent-soft);
+}
+.banner .icon { width: 28px; height: 28px; color: var(--anas-accent); }
+.banner__text { display: flex; flex-direction: column; flex: 1; min-width: 200px; }
+
+.files {
+  width: 100%; border-collapse: collapse;
+  background: var(--anas-surface);
+  border: 1px solid var(--anas-border); border-radius: var(--anas-radius);
+  overflow: hidden;
+}
+.files th { text-align: left; font-weight: 500; color: var(--anas-muted); font-size: 0.85rem; padding: 8px 12px; border-bottom: 1px solid var(--anas-border); }
+.files td { padding: 4px 12px; border-bottom: 1px solid var(--anas-border); }
+.files tr:last-child td { border-bottom: 0; }
+.files tbody tr:hover { background: var(--anas-surface-2); }
+.files .num { text-align: right; white-space: nowrap; color: var(--anas-muted); }
+.files .date { white-space: nowrap; color: var(--anas-muted); }
+.files__name { display: flex; align-items: center; gap: 10px; padding: 6px 0; color: var(--anas-text); text-decoration: none; word-break: break-all; }
+.files__name .icon { color: var(--anas-accent); }
+.files__actions { text-align: right; white-space: nowrap; width: 1%; }
+
+@media (max-width: 640px) {
+  .files .date, .files th.date { display: none; }
+}
+
+.empty { padding: 48px 16px; text-align: center; color: var(--anas-muted); border: 2px dashed var(--anas-border); border-radius: var(--anas-radius); }
+
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+.card { background: var(--anas-surface); border: 1px solid var(--anas-border); border-radius: var(--anas-radius); padding: 16px; box-shadow: var(--anas-shadow); }
+.card h3 { margin: 0; font-size: 1.1rem; }
+.card p { margin: 6px 0; }
+.card__head { display: flex; gap: 12px; align-items: center; }
+.card__head .icon, .card__icon { width: 40px; height: 40px; color: var(--anas-accent); border-radius: 8px; }
+.card__actions { display: flex; gap: 8px; margin-top: 12px; }
+
+.login { max-width: 360px; margin: 10vh auto; display: flex; flex-direction: column; gap: 12px; }
+.login label { display: flex; flex-direction: column; gap: 4px; }
+.login input { min-height: 40px; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--anas-border); background: var(--anas-bg); color: var(--anas-text); font: inherit; }
+
+.uploads {
+  position: fixed; right: 16px; bottom: 16px; z-index: 20;
+  width: min(420px, calc(100vw - 32px)); max-height: 50vh; overflow: auto;
+  background: var(--anas-surface); border: 1px solid var(--anas-border); border-radius: var(--anas-radius);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.2); padding: 12px 16px;
+}
+.uploads h2 { font-size: 1rem; margin: 0 0 8px; }
+.upload { display: grid; grid-template-columns: 1fr 100px; gap: 8px; align-items: center; font-size: 0.85rem; padding: 2px 0; }
+.upload__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.upload progress { width: 100%; }
+.upload--done .upload__name { color: var(--anas-muted); }
+.upload--skipped .upload__name { color: var(--anas-muted); text-decoration: line-through; }
+.upload--error .upload__name { color: var(--anas-danger); }
+
+.drop {
+  position: fixed; inset: 0; z-index: 30;
+  display: flex; align-items: center; justify-content: center;
+  background: color-mix(in srgb, var(--anas-accent) 20%, transparent);
+  border: 4px dashed var(--anas-accent);
+  font-size: 1.5rem; font-weight: 700; color: var(--anas-text);
+  pointer-events: none;
+}
+.drop[hidden] { display: none; }
+
+.toast {
+  position: fixed; left: 50%; bottom: 24px; z-index: 40;
+  transform: translate(-50%, 200%);
+  max-width: calc(100vw - 32px);
+  padding: 10px 20px; border-radius: 8px;
+  background: var(--anas-text); color: var(--anas-bg);
+  visibility: hidden;
+  transition: transform 0.2s, visibility 0.2s;
+}
+.toast.show { transform: translate(-50%, 0); visibility: visible; }
+.toast--error { background: var(--anas-danger); color: #fff; }
