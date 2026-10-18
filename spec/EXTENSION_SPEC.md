@@ -31,7 +31,7 @@ ANAS は Android 端末のストレージ（本体のフォルダ・SD カード
 |---|---|
 | `/x/<id>/` | `app/index.html` |
 | `/x/<id>/<パス>` | `app/<パス>`（JS・CSS・画像など） |
-| `/x/<id>/api/...` | `data/` を読み書きする API（[4章](#4-http-api)） |
+| `/x/<id>/api/...` | `data/` を読み書きする API と、外部サイトへのアクセス（[4章](#4-http-api)） |
 | `/_anas/sdk.js` | API を簡単に使うための JS モジュール（[3章](#3-sdk)） |
 | `/_anas/base.css` | ANAS と同じ見た目の共通 CSS（任意） |
 
@@ -59,7 +59,8 @@ ANAS は Android 端末のストレージ（本体のフォルダ・SD カード
   "description": "ScanSnap でスキャンした本を読む",
   "icon": "icon.svg",
   "scope": "self",
-  "externalOrigins": []
+  "externalOrigins": [],
+  "network": ["https://www.amazon.co.jp", "https://*.media-amazon.com"]
 }
 ```
 
@@ -73,6 +74,7 @@ ANAS は Android 端末のストレージ（本体のフォルダ・SD カード
 | `icon` | | `app/` からの相対パス。一覧に表示される |
 | `scope` | | `"self"`（既定）: `data/` の中だけ。`"all"`: NAS 全体の API（`/api/v1/...`）も使う。`"all"` は**ユーザーがアプリで許可したときだけ**有効 |
 | `externalOrigins` | | CDN など、読み込み・通信を許可する外部オリジン（`https://` のみ）。例: `["https://cdn.jsdelivr.net"]`。**ANAS は LAN 内で使うので、インターネットに繋がらないこともあります。ライブラリはできるだけ `app/` に同梱してください** |
+| `network` | | ANAS（端末）経由でアクセスする外部サイト。`https://host`・`https://host:port`、または `https://*.example.com`（サブドメインすべて。`*.com` のような広すぎるものは不可）。**ユーザーがアプリで許可したときだけ**有効（[2.7](#27-外部サイトへのアクセスnetwork)） |
 
 未知のキーは無視されます。不正なときは拡張機能の一覧にエラー内容が表示されます。
 
@@ -100,7 +102,7 @@ ANAS は Android 端末のストレージ（本体のフォルダ・SD カード
 |---|---|
 | スクリプト・CSS | 同じサーバー（`'self'`）、インライン、WebAssembly、`externalOrigins` |
 | 画像・動画・音声・フォント | 同じサーバー、`data:`、`blob:`、`externalOrigins` |
-| `fetch` / XHR / WebSocket | **自分の `/x/<id>/` 以下**と `externalOrigins`（`scope: "all"` が許可されていれば同じサーバー全体） |
+| `fetch` / XHR / WebSocket | **自分の `/x/<id>/` 以下**と `externalOrigins`（`scope: "all"` が許可されていれば同じサーバー全体）。CORS で読めないサイトは `anas.fetch()`（[2.7](#27-外部サイトへのアクセスnetwork)） |
 | `<iframe>` / `<embed>` / `<object>` | 自分の `/x/<id>/` 以下（`blob:` も可） |
 | Web Worker | 同じサーバー、`blob:` |
 
@@ -109,6 +111,16 @@ ANAS は Android 端末のストレージ（本体のフォルダ・SD カード
 - ログイン（パスワード設定時）はブラウザの Cookie で行われるので、拡張機能側で認証を書く必要はありません。
 
 > **注意**: 拡張機能は NAS 本体と同じオリジンで動くので、CSP とサーバー側の検査で守っていますが、完全な隔離ではありません。**信頼できる拡張機能だけを入れてください。**
+
+#### ANAS アプリ（クライアント）の中で開いたとき
+
+スマホの ANAS アプリの「ブラウズ」（WebView）で開いた場合は、PC のブラウザと次の点が違います。
+
+- **LAN の外には一切つながりません。** `externalOrigins` に書いた CDN なども読み込めないので、ライブラリは `app/` に同梱してください。外部サイトへのリンクは端末の普段のブラウザで開きます。ただし `anas.fetch()`・`anas.fetchToFile()` は端末（ANAS のサーバー）が取りに行くので、アプリの中でも使えます。
+- **ダウンロード**: `/x/<id>/api/file?...&download=1`（`anas.fileUrl(path, { download: true })`）や `zipUrl()` へのリンクは、端末の Download フォルダに保存されます。
+- **ページの中で作ったファイル**（`URL.createObjectURL(blob)` や `data:` の URL）は、`<a href="blob:..." download="名前">` をクリック（または `a.click()`）したときだけ、保存先を選ぶ画面を出して保存できます（50MB まで）。`window.open(blobUrl)` や `location.href = blobUrl` では保存できません。
+- `<input type="file">` は使えますが、`webkitdirectory`（フォルダごと選ぶ）は使えません。
+- `window.open` で新しいウィンドウは開きません。
 
 ### 2.6 ファイル名の制限
 
@@ -119,6 +131,35 @@ SD カードや USB ドライブ（FAT32 / exFAT）でも保存できるよう�
 - UTF-8 で 255 バイトを超える名前
 
 また、FAT32 では **1 ファイル 4GB まで**です。大文字小文字は区別されないことがあります（`A.pdf` と `a.pdf` は同じファイルになる）。
+
+### 2.7 外部サイトへのアクセス（network）
+
+ブラウザの JS からは、CORS を許可していない外部サイト（Amazon の商品ページなど）の中身は読めません。
+`anas.json` の `network` に書いてユーザーがアプリで許可すると、**ANAS（端末）が代わりに取りに行く** API が使えます。
+
+```js
+import { anas, joinPath } from "/_anas/sdk.js";
+
+// ページの HTML を読んで、タイトルと表紙の URL を取り出す（DOMParser はスクリプトを実行しない）
+const res = await anas.fetch("https://www.amazon.co.jp/dp/4000000000");
+if (!res.ok) throw new Error(`HTTP ${res.status}`);
+const doc = new DOMParser().parseFromString(await res.text(), "text/html");
+const title = doc.querySelector("#productTitle")?.textContent?.trim();
+const cover = doc.querySelector("#landingImage")?.getAttribute("src");
+
+// 画像はブラウザを通さず、そのまま data/ に保存する
+if (cover) await anas.fetchToFile(cover, joinPath("/.covers", "4000000000.jpg"), { overwrite: true });
+await anas.writeJson("/.meta/4000000000.json", { title }, { overwrite: true });
+```
+
+- 使えるのは `network` に書かれ、**アプリの「拡張」タブで許可された**サイトだけです。それ以外は `AnasError(403, "network")`。
+  許可したあとで `network` にサイトを増やすと、増やした分は許可し直すまで使えません。
+- `https` だけです。リダイレクトは 5 回までたどり、**リダイレクト先も `network` に入っている必要**があります（短縮 URL の `amzn.asia` など、途中のホストも書いてください）。
+- LAN 内の機器や端末自身（プライベート IP・`localhost` など）には、名前を解決した結果で判定してアクセスしません。
+- 送られるのは `init` に書いたヘッダーだけです（ブラウザの Cookie などは送られません）。`User-Agent` の既定は `ANAS/<バージョン>` で、指定もできます。
+- `anas.fetch()` の応答は 64MB まで、本文を読み終わるまで 120 秒まで。`anas.fetchToFile()` は 4GB 未満まで（タイムアウトは通信が 30 秒止まったとき）。同時に処理するのは 4 件までで、それ以上は順番待ちになります。
+- 端末がインターネットに繋がっていないと `AnasError(502, "upstream")` になります。
+- 外部サイトの規約は守ってください。HTML の構造は予告なく変わるので、公開 API（書籍なら Google Books API や国立国会図書館サーチなど）があればそちらのほうが安定します。
 
 ## 3. SDK
 
@@ -150,6 +191,9 @@ SD カードや USB ドライブ（FAT32 / exFAT）でも保存できるよう�
 | `anas.mkdir(path)` | フォルダを作る（途中も作る、既存なら何もしない） |
 | `anas.rename(path, newName)` | 名前を変える（同じフォルダ内だけ） |
 | `anas.remove(path)` | 削除（フォルダは中身ごと） |
+| `anas.search(q, { limit, hidden })` | `data/` の中のファイルを文章で探す（例: `"3日以内に追加したPDF"`・`"議事録のメモ"`）。ファイル名・フォルダ名・種類・日時・サイズから探し、中身は見ない。返り値は `{ q, query, hits, total, fuzzy, status }`（[4章](#4-http-api)）。`hidden: true` で `.` 始まりも含める |
+| `anas.fetch(url, init)` | 外部サイトに ANAS 経由でアクセスする（[2.7](#27-外部サイトへのアクセスnetwork)）。返り値はふつうの `Response`（`status`・`headers`・`url` は外部サイトのもの。`Set-Cookie` は除く）。`init` は `method`・`headers`・`body`（文字列・`Blob`・`ArrayBuffer`・`Uint8Array`・`URLSearchParams`）・`signal` |
+| `anas.fetchToFile(url, path, options)` | 外部サイトのファイルを `data/` の `path` に保存する。`options` は `init` と同じものに加えて `overwrite`（既定 `false`）・`mkdirs`（既定 `true`）。返り値は `{ entry, url, status, contentType }`。外部サイトが 2xx 以外なら `AnasError(502, "upstream_status")` で、ファイルは作られない |
 
 `options`（`UploadOptions`）:
 
@@ -209,6 +253,11 @@ SDK を使わずに直接呼ぶこともできます。パスはすべてクエ�
 | POST | `/x/<id>/api/mkdir` | `{"path": "/books"}` | `Entry` |
 | POST | `/x/<id>/api/rename` | `{"path": "/a.pdf", "newName": "b.pdf"}` | `Entry` |
 | POST | `/x/<id>/api/delete` | `{"path": "/a.pdf"}` | `{"ok": true}` |
+| GET | `/x/<id>/api/search?q=...[&limit=50][&hidden=1]` | | `{ q, query, hits: SearchHit[], total, fuzzy, status }`。`query.summary` は読み取った条件（「追加: 3日以内」など）、`hits[].added` は ANAS に追加された日時（不明なら無し）、`total` は 1000 を超えると 1001、`fuzzy` は似た名前を返したとき true、`status.running` は索引を作成中のとき true |
+| POST | `/x/<id>/api/fetch` | `{"url": "https://...", "method": "GET", "headers": {}, "body": "テキスト"}`（バイナリは `"bodyBase64"`） | 外部サイトの本文そのまま。ステータスは常に `200` で、外部サイトのステータスは `X-Anas-Status`、最後の URL は `X-Anas-Url`、ヘッダーは `X-Anas-Headers`（`{"名前": "値"}` の JSON を URL エンコードしたもの） |
+| POST | `/x/<id>/api/fetch-to-file` | `fetch` と同じものに `"path"`・`"overwrite"`・`"mkdirs"` を足す | `201` + `{ entry, url, status, contentType }` |
+
+`fetch` と `fetch-to-file` は `Content-Type: application/json` で送ってください（それ以外は 400）。
 
 エラーは `{"error": "メッセージ", "code": "..."}` で返ります。
 
@@ -217,12 +266,18 @@ SDK を使わずに直接呼ぶこともできます。パスはすべてクエ�
 | 400 | `invalid_path` / `bad_request` / `type` | パスやファイル名が不正、フォルダとファイルの取り違え |
 | 401 | `unauthorized` | ログインが必要（パスワード設定時） |
 | 403 | `read_only` / `scope` | 読み取り専用、または許可されていない API |
+| 403 | `network` | 外部サイトへのアクセスが許可されていない（`network` にない・アプリで未許可・LAN 内のアドレス） |
 | 404 | `not_found` | ない |
 | 409 | `exists` | 同名のものがある |
+| 413 | `too_large` | `fetch` に送った本文が大きすぎる（JSON で 12MB まで） |
 | 416 | `range` | Range が不正 |
+| 502 | `upstream` / `upstream_status` / `too_large` | 外部サイトに繋がらない / 外部サイトが 2xx 以外を返した（`fetch-to-file`）/ 外部サイトの応答が大きすぎる |
 | 503 | `offline` | ストレージが取り外されている |
+| 504 | `timeout` | 外部サイトの応答がタイムアウトした |
 
-`scope: "all"` が許可された拡張機能は、NAS 本体の API（`/api/v1/volumes`、`/api/v1/fs/<volume>/list?path=` など、パスはストレージのルートから）も使えます。形は上の表と同じです。
+`scope: "all"` が許可された拡張機能は、NAS 本体の API（`/api/v1/volumes`、`/api/v1/fs/<volume>/list?path=` など、パスはストレージのルートから）も使えます。形は上の表と同じです。NAS 全体の検索は `/api/v1/search?q=`（すべてのストレージ）と `/api/v1/fs/<volume>/search?q=` です。
+
+検索は、端末の中の索引（ファイル名・フォルダ名・種類・サイズ・日時）を使います。索引はサーバーの開始後と 12 時間ごとに作り直し、ANAS 経由の書き込み・名前の変更・削除はその場で反映します。作成中は見つからないものがあります（`status.running`）。
 
 ## 5. 配布とインストール
 
@@ -322,6 +377,8 @@ ANAS の拡張機能を作ってください。仕様書（EXTENSION_SPEC.md）�
 - [ ] `app/index.html` がある
 - [ ] JS・CSS・画像は相対パスで参照している（`/x/<id>/` 以下でも、`/_anas/` 以下でもないパスは使わない）
 - [ ] データの読み書きは SDK（`/_anas/sdk.js`）か `/x/<id>/api/` 経由で、パスは `data/` からの相対
-- [ ] 外部のライブラリは `app/` に同梱した（または `externalOrigins` に書いた）
+- [ ] 外部のライブラリは `app/` に同梱した（または `externalOrigins` に書いた。ANAS アプリの中では外部は読めない）
+- [ ] CORS で読めない外部サイトは `anas.fetch()` / `anas.fetchToFile()` で読み、そのホスト（リダイレクト先も）を `network` に書いた
+- [ ] ページで作ったファイルのダウンロードは `<a href="blob:..." download="名前">` のクリックで行っている
 - [ ] ファイル名に `: * ? " < > |` などを使っていない
 - [ ] 置いたあとに「再スキャン」した

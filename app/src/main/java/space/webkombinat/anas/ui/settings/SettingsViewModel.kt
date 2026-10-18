@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import space.webkombinat.anas.data.AppMode
 import space.webkombinat.anas.data.AppSettings
 import space.webkombinat.anas.data.SettingsRepository
 import space.webkombinat.anas.data.ThemeMode
@@ -16,6 +17,8 @@ class SettingsViewModel @Inject constructor(
 ) : ViewModel() {
 
     val settings: StateFlow<AppSettings> = repository.settings
+
+    fun setMode(mode: AppMode) = viewModelScope.launch { repository.update { it.copy(mode = mode) } }
 
     fun setTheme(theme: ThemeMode) = viewModelScope.launch { repository.update { it.copy(theme = theme) } }
 
@@ -29,6 +32,10 @@ class SettingsViewModel @Inject constructor(
     fun setPassword(password: String) = viewModelScope.launch { repository.update { it.copy(password = password) } }
 
     fun setReadOnly(readOnly: Boolean) = viewModelScope.launch { repository.update { it.copy(readOnly = readOnly) } }
+
+    fun setWebDavEnabled(enabled: Boolean) = viewModelScope.launch { repository.update { it.copy(webDavEnabled = enabled) } }
+
+    fun setWebDavReadOnly(readOnly: Boolean) = viewModelScope.launch { repository.update { it.copy(webDavReadOnly = readOnly) } }
 
     companion object {
         /** 1024 未満は Android では root でないと開けない */

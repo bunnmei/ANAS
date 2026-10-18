@@ -77,6 +77,13 @@ class ExtensionsViewModel @Inject constructor(
         }
     }
 
+    /** anas.json の `network` に書かれたサイトへのアクセスを許可する（[origins] が空なら取り消す） */
+    fun setNetwork(id: String, origins: List<String>) = viewModelScope.launch {
+        settings.update { s ->
+            s.copy(networkGrants = if (origins.isEmpty()) s.networkGrants - id else s.networkGrants + (id to origins.toSet()))
+        }
+    }
+
     /** `/.<id>/` にひな形を作る。既存のファイルは上書きしない */
     fun create(volume: String, id: String, name: String) = viewModelScope.launch {
         val result = runCatching {

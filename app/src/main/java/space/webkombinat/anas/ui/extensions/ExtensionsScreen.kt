@@ -82,6 +82,7 @@ fun ExtensionsScreen(vm: ExtensionsViewModel = hiltViewModel()) {
         onOpenSpec = { open("/_anas/spec.md") },
         onEnabledChange = { id, v -> vm.setEnabled(id, v) },
         onFullAccessChange = { id, v -> vm.setFullAccess(id, v) },
+        onNetworkChange = { id, origins -> vm.setNetwork(id, origins) },
     )
 
     if (creating) {
@@ -104,6 +105,7 @@ private fun ExtensionsContent(
     onOpenSpec: () -> Unit,
     onEnabledChange: (String, Boolean) -> Unit,
     onFullAccessChange: (String, Boolean) -> Unit,
+    onNetworkChange: (String, List<String>) -> Unit,
 ) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         Section(stringResource(R.string.extensions_title)) {
@@ -139,7 +141,7 @@ private fun ExtensionsContent(
                 Text(stringResource(R.string.extensions_empty), style = MaterialTheme.typography.bodyMedium)
             }
             extensions.forEach { ext ->
-                ExtensionCard(ext, serverRunning, onOpen, onEnabledChange, onFullAccessChange)
+                ExtensionCard(ext, serverRunning, onOpen, onEnabledChange, onFullAccessChange, onNetworkChange)
             }
             Spacer(Modifier.padding(8.dp))
         }
@@ -153,6 +155,7 @@ private fun ExtensionCard(
     onOpen: (String) -> Unit,
     onEnabledChange: (String, Boolean) -> Unit,
     onFullAccessChange: (String, Boolean) -> Unit,
+    onNetworkChange: (String, List<String>) -> Unit,
 ) {
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -181,6 +184,26 @@ private fun ExtensionCard(
                         Text(stringResource(R.string.extension_full_access_desc), style = MaterialTheme.typography.bodySmall)
                     }
                     Switch(checked = ext.fullAccess, onCheckedChange = { onFullAccessChange(ext.id, it) })
+                }
+            }
+            if (ext.error == null && ext.network.isNotEmpty()) {
+                // 許可したあとで anas.json にサイトが増えたら、増えた分は許可し直すまで使えない
+                val allGranted = ext.networkAllowed.containsAll(ext.network)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(stringResource(R.string.extension_network), style = MaterialTheme.typography.bodyMedium)
+                        Text(stringResource(R.string.extension_network_desc), style = MaterialTheme.typography.bodySmall)
+                        Text(
+                            ext.network.joinToString("\n") { it.removePrefix("https://") },
+                            style = MaterialTheme.typography.bodySmall,
+                            fontFamily = FontFamily.Monospace,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        if (!allGranted && ext.networkAllowed.isNotEmpty()) {
+                            Text(stringResource(R.string.extension_network_added), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                    Switch(checked = allGranted, onCheckedChange = { onNetworkChange(ext.id, if (it) ext.network else emptyList()) })
                 }
             }
             if (ext.error == null && ext.enabled) {
@@ -252,12 +275,13 @@ private fun ExtensionsPreview() {
         ExtensionsContent(
             extensions = listOf(
                 ExtensionInfo("jisui", "自炊本棚", "1.0.0", "スキャンした本を読む", "disk1", "/.jisui", "/x/jisui/",
-                    scope = ExtensionManifest.Scope.SELF, enabled = true, fullAccess = false),
+                    scope = ExtensionManifest.Scope.SELF, enabled = true, fullAccess = false,
+                    network = listOf("https://www.amazon.co.jp", "https://*.media-amazon.com")),
                 ExtensionInfo("broken", ".broken", "", "", "disk1", "/.broken", "/x/broken/",
                     scope = ExtensionManifest.Scope.SELF, enabled = true, fullAccess = false, error = "anas.json を読めません"),
             ),
             serverRunning = true, scanning = false,
-            onRescan = {}, onCreate = {}, onOpen = {}, onOpenSpec = {}, onEnabledChange = { _, _ -> }, onFullAccessChange = { _, _ -> },
+            onRescan = {}, onCreate = {}, onOpen = {}, onOpenSpec = {}, onEnabledChange = { _, _ -> }, onFullAccessChange = { _, _ -> }, onNetworkChange = { _, _ -> },
         )
     }
 }

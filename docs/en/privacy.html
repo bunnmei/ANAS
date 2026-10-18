@@ -29,7 +29,7 @@
 
   <main>
 <h1 class="page-title">Privacy policy</h1>
-    <p class="page-meta">ANAS / effective and last updated: October 17, 2026</p>
+    <p class="page-meta">ANAS / effective October 17, 2026 / last updated October 18, 2026</p>
 
     <div class="summary">
       <p><strong>This app collects no personal information.</strong> Files only travel between the device and the machines you connect from the same network. Nothing is sent to the developer or any external server.</p>
@@ -48,29 +48,37 @@
     </ul>
 
     <h2>3. Data stored on the device</h2>
-    <p>The picked folders and settings (theme, port, access password, enabled extensions) are stored only on the device and are removed when the App is uninstalled.</p>
+    <p>The picked folders and settings (theme, port, access password, enabled extensions, and the client's server address on your LAN) are stored only on the device. The search index (file and folder names, sizes and dates, not file contents) is also kept only in the App's private storage on the device. Both are removed when the App is uninstalled.</p>
 
-    <h2>4. Permissions</h2>
+    <h2>4. Client (viewing another NAS)</h2>
+    <ul>
+      <li>The in-app browser (WebView) only opens pages on the same LAN (private IP addresses). Links to external sites are handed to your normal browser, and images or scripts loaded from the internet are blocked.</li>
+      <li>QR codes are read by the Google Play services code scanner. The camera image is not given to the App; it only receives the scanned text (the server URL). The scanner follows Google's policies.</li>
+      <li>Login cookies (access password) and page data are stored only in the WebView on the device.</li>
+    </ul>
+
+    <h2>5. Permissions</h2>
     <div class="table-wrap">
       <table>
         <thead><tr><th>Permission</th><th>Purpose</th></tr></thead>
         <tbody>
-          <tr><td>Internet, network state, Wi-Fi state</td><td>Accept connections from PCs on the LAN and show the device's IP address</td></tr>
+          <tr><td>Internet, network state, Wi-Fi state</td><td>Accept connections from PCs on the LAN and show the device's IP address; fetch data from external sites for extensions you allow</td></tr>
           <tr><td>Local network access (Android 17+)</td><td>Accept connections from PCs on the LAN</td></tr>
           <tr><td>Foreground service, keep awake</td><td>Keep the server running with the screen off</td></tr>
           <tr><td>Notifications</td><td>Show that the server is running, with a Stop button</td></tr>
+          <tr><td>Write storage (Android 9 only)</td><td>Save files downloaded in the client to the Download folder</td></tr>
         </tbody>
       </table>
     </div>
     <p>Folder access is limited to what you pick in Android's folder picker; the App does not request access to all files.</p>
 
-    <h2>5. Extensions</h2>
-    <p>Extensions are HTML / JavaScript that you install yourself. Whether an extension talks to external servers depends on the extension (external access is blocked by default). Only install extensions you trust.</p>
+    <h2>6. Extensions</h2>
+    <p>Extensions are HTML / JavaScript that you install yourself. Whether an extension talks to external servers depends on the extension (external access is blocked by default). If you allow an extension's requested sites (<code>network</code>) in the Extensions tab, the device fetches data from those sites for it, sending only the URL, headers and body the extension specifies. Only install extensions you trust.</p>
 
-    <h2>6. Contact</h2>
+    <h2>7. Contact</h2>
     <p>Please use <a href="https://github.com/bunnmei/ANAS/issues">GitHub Issues</a>.</p>
 
-    <h2>7. Changes</h2>
+    <h2>8. Changes</h2>
     <p>If this policy changes, this page and its date will be updated.</p>
   </main>
 

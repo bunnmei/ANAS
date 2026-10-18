@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.QrCode2
 import androidx.compose.material.icons.filled.SdStorage
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Usb
@@ -147,6 +148,9 @@ private fun ServerCard(server: ServerState, canStart: Boolean, onStart: () -> Un
     val snackbar = LocalSnackbar.current
     val scope = rememberCoroutineScope()
     val copiedText = stringResource(R.string.copied)
+    // 表示中の QR（ラベル, URL）
+    var qr by remember { mutableStateOf<Pair<String, String>?>(null) }
+    qr?.let { (label, url) -> QrDialog(url, label, onDismiss = { qr = null }) }
 
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -194,6 +198,9 @@ private fun ServerCard(server: ServerState, canStart: Boolean, onStart: () -> Un
                                         snackbar.showSnackbar(copiedText)
                                     }
                                 }) { Icon(Icons.Default.ContentCopy, contentDescription = stringResource(R.string.copy)) }
+                                IconButton(onClick = { qr = address.label to "$url/" }) {
+                                    Icon(Icons.Default.QrCode2, contentDescription = stringResource(R.string.qr_show))
+                                }
                                 IconButton(onClick = {
                                     context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri()))
                                 }) { Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = stringResource(R.string.open_in_browser)) }

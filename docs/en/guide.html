@@ -41,6 +41,7 @@
         <li><a href="#storage">Add storage</a></li>
         <li><a href="#start">Start the server</a></li>
         <li><a href="#browser">Use it from a PC browser</a></li>
+        <li><a href="#client">Browse from your phone (client)</a></li>
         <li><a href="#settings">Settings</a></li>
         <li><a href="#trouble">Troubleshooting</a></li>
       </ol>
@@ -76,26 +77,80 @@
           <tr><td>Download a whole folder</td><td>The ZIP button on a folder row, or "ZIP download" for the open folder. The zip is built while streaming, so no free space is needed on the device (the browser can't show the remaining time)</td></tr>
           <tr><td>Rename / delete</td><td>The ✎ and 🗑 buttons on each row</td></tr>
           <tr><td>Hidden files</td><td>Tick "show hidden files" (names starting with <code>.</code>)</td></tr>
+          <tr><td>Find files</td><td>Type a plain sentence in the search box at the top (see "Finding files" below)</td></tr>
           <tr><td>Extensions</td><td>"Extensions" at the top, or "Open dedicated view" when you open such a folder</td></tr>
         </tbody>
       </table>
     </div>
     <p>The web UI is currently in Japanese.</p>
 
-    <h2 id="settings">4. Settings</h2>
+    <h3 id="search">Finding files</h3>
+    <p>Type a plain sentence in the search box at the top. ANAS searches file and folder names, types, dates and sizes (not file contents). Japanese and simple English work: "PDF uploaded within 3 days", "photos last week", "1GB video largest". The way ANAS read your query is shown above the results, and if nothing matches exactly it shows similar names.</p>
+    <p>Searching uses an <strong>index</strong> kept on the device. It is built shortly after the server starts and rebuilt every 12 hours (or right away with "rebuild index" on the search page). Uploads, renames and deletes made through ANAS are reflected immediately. The first build can take a while with many files (tens of minutes for hundreds of thousands).</p>
+
+    <h3 id="webdav">Mount it as a drive (WebDAV)</h3>
+    <p>Turn on "Use WebDAV" under Settings → Network drive (WebDAV) in the app, and you can mount the NAS as a drive on your PC. File managers, editors and tools such as Claude Code can then open and save files normally. The address is <code>http://&lt;device IP&gt;:&lt;port&gt;/dav/</code> (shown in Settings). Any user name works; the password is the access password.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>PC</th><th>How</th></tr></thead>
+        <tbody>
+          <tr><td>macOS</td><td>Finder → Go → Connect to Server → <code>http://192.168.1.108:8080/dav/</code></td></tr>
+          <tr><td>Linux</td><td>GNOME Files → Other Locations → <code>dav://192.168.1.108:8080/dav/</code>. To mount as a folder without root, use rclone: <code>rclone config create anas webdav url=http://192.168.1.108:8080/dav/ vendor=other user=me pass=$(rclone obscure PASSWORD)</code> then <code>rclone mount anas:disk1 ~/anas --vfs-cache-mode writes</code></td></tr>
+          <tr><td>Windows</td><td>File Explorer → Map network drive → <code>http://192.168.1.108:8080/dav/disk1</code>. <strong>If you set a password</strong>, Windows refuses Basic authentication over http by default: set <code>BasicAuthLevel</code> to <code>2</code> under <code>HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\WebClient\Parameters</code> and restart the WebClient service (or use a WebDAV app such as RaiDrive)</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <ul>
+      <li>The connection is plain http. Use it only inside your LAN (ANAS refuses connections from outside). Setting a password is recommended.</li>
+      <li>"WebDAV read-only" makes the drive read-only from the PC (useful when letting AI tools look around).</li>
+      <li>Everything goes through Android's SAF, so listing huge folders or grepping everything is slower than a local disk. Moving to another folder copies then deletes, which takes time.</li>
+    </ul>
+
+    <h2 id="client">4. Browse from your phone (client)</h2>
+    <p>Install ANAS on your everyday phone too, scan a QR code once, and open the NAS inside the app. The phone only views; it does not need to be a server.</p>
+    <ol class="steps">
+      <li><strong>Open ANAS on the phone and choose "Just view another NAS (client)"</strong>In this mode the server never runs, and the app shows only the NAS page without tabs.</li>
+      <li><strong>On the server device, tap the QR button next to the address on "Home"</strong>A QR code for <code>http://192.168.x.x:8080/</code> appears.</li>
+      <li><strong>On the phone, tap "Scan QR" and scan it</strong>The app checks that it really is an ANAS server, saves it and opens it. From then on, opening the app shows the same NAS.</li>
+    </ol>
+    <div class="callout">
+      <span class="callout__title">About QR scanning</span>
+      <p>QR codes are read by the Google Play services scanner, so ANAS needs no camera permission. The scanner is downloaded on first use (if you see "preparing", wait a moment and tap again). You can also type an address such as <code>192.168.1.10:8080</code>.</p>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>What</th><th>How</th></tr></thead>
+        <tbody>
+          <tr><td>Upload</td><td>"Upload" lets you pick files (several at once). "Whole folder" is not available because of Android limits</td></tr>
+          <tr><td>Download</td><td>Files and folder ZIPs go to the Download folder and show a notification. Files made by extensions (such as a single KiCad symbol) open a save dialog</td></tr>
+          <tr><td>Back</td><td>The system Back button goes back one page</td></tr>
+          <tr><td>Menu (⋮)</td><td>Scan QR again, open in your browser, settings</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>The in-app browser only opens <strong>pages on the same LAN (private IP addresses)</strong>. Links to external sites open in your normal browser, and images or scripts loaded from the internet are blocked, so extensions that rely on an external CDN (<code>externalOrigins</code>) may not fully work in the app. The server device has the same view in the "Browse" tab ("Open this device's server" opens its own NAS).</p>
+
+    <h2 id="settings">5. Settings</h2>
     <div class="table-wrap">
       <table>
         <thead><tr><th>Item</th><th>Meaning</th></tr></thead>
         <tbody>
+          <tr><td>Mode</td><td>Be a NAS server / just view another NAS (client). Switching to client stops the server</td></tr>
+          <tr><td>Connection (Browse)</td><td>The NAS opened in "Browse". Scan the QR again or remove it</td></tr>
           <tr><td>Theme</td><td>System / light / dark</td></tr>
           <tr><td>Port</td><td>8080 by default, 1024–65535. Applied when the server restarts</td></tr>
           <tr><td>Access password</td><td>When set, browsers must log in. Empty means no password</td></tr>
-          <tr><td>Read-only mode</td><td>Blocks uploads, deletes and renames</td></tr>
+          <tr><td>Read-only mode</td><td>Blocks uploads, deletes and renames (WebDAV included)</td></tr>
+          <tr><td>Network drive (WebDAV)</td><td>Use WebDAV (off by default) / WebDAV read-only. See <a href="#webdav">Mount it as a drive</a></td></tr>
         </tbody>
       </table>
     </div>
 
-    <h2 id="trouble">5. Troubleshooting</h2>
+    <h2 id="trouble">6. Troubleshooting</h2>
+    <details>
+      <summary>The phone app says it can't connect</summary>
+      <p>Check that the ANAS server is running on the server device and that the phone is on the same Wi-Fi, then tap "Reload". The router assigns the server's IP address, so it can change; if it does, use "Scan QR again" in the menu (reserving the server's IP address in your router avoids this).</p>
+    </details>
     <details>
       <summary>The PC can't open the URL</summary>
       <p>Make sure both are on the same network. Guest Wi-Fi and routers with "AP isolation" block device-to-device traffic. Mobile data (4G / 5G) does not work.</p>

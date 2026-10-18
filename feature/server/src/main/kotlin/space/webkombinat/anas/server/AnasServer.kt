@@ -32,6 +32,7 @@ import io.ktor.server.routing.routing
 import io.ktor.utils.io.jvm.javaio.copyTo
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
@@ -53,12 +54,15 @@ import java.net.URI
  * | `/_anas/sdk.js` ほか | 拡張機能用の SDK・共通 CSS・仕様書 |
  * | `/api/v1/...` | NAS のファイル API |
  * | `/x/<id>/` | 拡張機能の UI（`/.<id>/app/`） |
- * | `/x/<id>/api/...` | 拡張機能のファイル API（`/.<id>/data/` の中だけ） |
+ * | `/x/<id>/api/...` | 拡張機能のファイル API（`/.<id>/data/` の中だけ）と外部サイトへのアクセス（[OutboundHttp]） |
  */
 class AnasServer(
     private val backend: StorageBackend,
     private val registry: ExtensionRegistry,
     private val assets: AssetSource,
+    private val outbound: OutboundHttp = OutboundHttp(),
+    /** ファイル検索。null なら検索の API は 503 */
+    private val search: SearchService? = null,
     private val config: () -> ServerConfig,
 ) {
     private var server: EmbeddedServer<*, *>? = null
@@ -70,7 +74,7 @@ class AnasServer(
     fun start(port: Int) {
         if (server != null) return
         server = embeddedServer(CIO, port = port, host = "0.0.0.0") {
-            anasModule(backend, registry, assets, config, sessions)
+            anasModule(backend, registry, assets, config, sessions, outbound, search)
         }.start(wait = false)
     }
 
@@ -80,7 +84,7 @@ class AnasServer(
     }
 }
 
-private val json = Json {
+internal val json = Json {
     ignoreUnknownKeys = true
     encodeDefaults = true
     explicitNulls = false
@@ -92,6 +96,8 @@ fun Application.anasModule(
     assets: AssetSource,
     config: () -> ServerConfig,
     sessions: Sessions = Sessions(),
+    outbound: OutboundHttp = OutboundHttp(),
+    search: SearchService? = null,
 ) {
     install(ContentNegotiation) { json(json) }
     install(StatusPages) {
@@ -101,6 +107,17 @@ fun Application.anasModule(
     fun isAuthorized(call: ApplicationCall): Boolean {
         val password = config().password
         return password.isEmpty() || sessions.isValid(call.request.cookies[Sessions.COOKIE], password)
+    }
+
+    /** `Authorization: Basic`。ユーザー名は何でもよく、パスワードがアクセスパスワードと合えば通す */
+    suspend fun basicAuthorized(call: ApplicationCall): Boolean {
+        val header = call.request.headers[HttpHeaders.Authorization] ?: return false
+        if (!header.startsWith("Basic ", ignoreCase = true)) return false
+        val decoded = runCatching { String(java.util.Base64.getDecoder().decode(header.substring(6).trim()), Charsets.UTF_8) }
+            .getOrNull() ?: return false
+        val ok = sessions.checkPassword(decoded.substringAfter(':', ""), config().password)
+        if (!ok) delay(500) // 総当たりを遅くする
+        return ok
     }
 
     // LAN 以外からの接続の拒否・ログインの確認・拡張機能からの NAS API 呼び出しの制限
@@ -115,6 +132,21 @@ fun Application.anasModule(
         call.response.header("Referrer-Policy", "same-origin")
 
         val path = call.request.path()
+
+        // WebDAV: 設定で無効なら無いことにする。認証は Cookie か Basic（WebDAV のクライアントは Cookie を使えない）
+        if (isWebDavPath(path)) {
+            if (!config().webDavEnabled) {
+                call.respond(HttpStatusCode.NotFound, ErrorResponse("WebDAV は無効です（アプリの設定で有効にできます）", "not_found"))
+                return@intercept finish()
+            }
+            if (!isAuthorized(call) && !basicAuthorized(call)) {
+                call.response.header(HttpHeaders.WWWAuthenticate, "Basic realm=\"ANAS\", charset=\"UTF-8\"")
+                call.respond(HttpStatusCode.Unauthorized, ErrorResponse("ログインしてください", "unauthorized"))
+                return@intercept finish()
+            }
+            return@intercept
+        }
+
         val isPublicApi = path == "/api/v1/info" || path == "/api/v1/login" || path == "/api/v1/logout"
         val needsAuth = (path.startsWith("/api/") && !isPublicApi) || path.startsWith("/x/")
         if (needsAuth && !isAuthorized(call)) {
@@ -143,8 +175,9 @@ fun Application.anasModule(
     }
 
     routing {
-        apiRoutes(backend, registry, config, sessions, ::isAuthorized)
-        extensionRoutes(backend, registry, config)
+        apiRoutes(backend, registry, config, sessions, ::isAuthorized, search)
+        extensionRoutes(backend, registry, config, outbound, search)
+        webDavRoutes(backend, config)
         staticRoutes(assets)
     }
 }
@@ -161,6 +194,7 @@ private fun Route.apiRoutes(
     config: () -> ServerConfig,
     sessions: Sessions,
     isAuthorized: (ApplicationCall) -> Boolean,
+    search: SearchService?,
 ) = route("/api/v1") {
     get("info") {
         val c = config()
@@ -214,7 +248,23 @@ private fun Route.apiRoutes(
                 FsScope(volume, SafePath.ROOT, writable = info.writable && !config().readOnly)
             },
             listExtra = { scope, path -> registry.containing(scope.volume, path)?.toInfo(config()) },
+            search = search,
         )
+    }
+
+    // すべてのボリュームから探す。?q=3日以内に追加したPDF&limit=50&hidden=1
+    get("search") { call.respond(searchIn(search, call, volume = null)) }
+
+    get("search/status") {
+        val s = search ?: throw ApiException("検索は使えません", HttpStatusCode.ServiceUnavailable, "search_unavailable")
+        call.respond(s.currentStatus())
+    }
+
+    // 索引を作り直す（終わるのを待たずに返す）
+    post("search/rescan") {
+        val s = search ?: throw ApiException("検索は使えません", HttpStatusCode.ServiceUnavailable, "search_unavailable")
+        call.application.launch { s.rescan() }
+        call.respond(HttpStatusCode.Accepted, s.currentStatus().copy(running = true))
     }
 
     get("extensions") { call.respond(registry.extensions.value.map { it.toInfo(config()) }) }
@@ -247,6 +297,8 @@ private fun Route.extensionRoutes(
     backend: StorageBackend,
     registry: ExtensionRegistry,
     config: () -> ServerConfig,
+    outbound: OutboundHttp,
+    search: SearchService?,
 ) = route("/x/{id}") {
 
     suspend fun usable(call: ApplicationCall): InstalledExtension {
@@ -258,19 +310,22 @@ private fun Route.extensionRoutes(
         return ext
     }
 
+    suspend fun dataScope(ext: InstalledExtension): FsScope {
+        val writable = backend.volumes().firstOrNull { it.id == ext.volume }?.writable == true && !config().readOnly
+        return FsScope(ext.volume, ext.dataDir, writable)
+    }
+
     route("api") {
         get("info") {
             val ext = usable(call)
             call.respond(ExtensionSelfInfo(ext.toInfo(config()), config().readOnly))
         }
-        fsRoutes(
-            backend = backend,
-            scopeOf = { call ->
-                val ext = usable(call)
-                val writable = backend.volumes().firstOrNull { it.id == ext.volume }?.writable == true && !config().readOnly
-                FsScope(ext.volume, ext.dataDir, writable)
-            },
-        )
+        fsRoutes(backend = backend, scopeOf = { call -> dataScope(usable(call)) }, search = search)
+        outboundRoutes(outbound, backend) { call ->
+            val ext = usable(call)
+            val c = config()
+            OutboundContext(dataScope(ext), ext.toInfo(c).networkAllowed, "ANAS/${c.appVersion}")
+        }
     }
 
     get("{path...}") {
@@ -351,6 +406,7 @@ private suspend fun ApplicationCall.respondError(cause: Throwable) {
         is StorageException.Offline -> HttpStatusCode.ServiceUnavailable to "offline"
         is StorageException.ReadOnly -> HttpStatusCode.Forbidden to "read_only"
         is StorageException.Io -> HttpStatusCode.InternalServerError to "io"
+        is ApiException -> cause.status to cause.code
         is BadRequestException, is SerializationException, is IllegalArgumentException -> HttpStatusCode.BadRequest to "bad_request"
         else -> HttpStatusCode.InternalServerError to "internal"
     }

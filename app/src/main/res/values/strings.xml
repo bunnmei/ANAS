@@ -4,6 +4,38 @@
     <string name="tab_home">ホーム</string>
     <string name="tab_extensions">拡張</string>
     <string name="tab_settings">設定</string>
+    <string name="tab_browse">ブラウズ</string>
+    <string name="back">戻る</string>
+    <string name="menu">メニュー</string>
+    <string name="close">閉じる</string>
+
+    <string name="mode_title">この端末の使い方</string>
+    <string name="mode_desc">あとから設定で変えられます。</string>
+    <string name="mode_server">NAS サーバーにする</string>
+    <string name="mode_server_desc">この端末のストレージ・SD カード・USB ドライブを LAN に公開します。ほかの端末の NAS を見ることもできます。</string>
+    <string name="mode_client">ほかの NAS を見るだけ（クライアント）</string>
+    <string name="mode_client_desc">普段使いのスマホ向け。サーバーの QR を読むだけで、アプリの中で NAS を開けます。</string>
+
+    <string name="qr_show">QR を表示</string>
+    <string name="qr_title">QR で接続（%1$s）</string>
+    <string name="qr_hint">普段使いのスマホの ANAS（ブラウズ →「QR を読む」）で読み取ると、接続先として登録されます。</string>
+
+    <string name="client_title">NAS に接続</string>
+    <string name="client_desc">サーバーにしている端末の ANAS で「ホーム → アドレスの QR ボタン」を押して、出てきた QR を読み取ってください。</string>
+    <string name="client_scan">QR を読む</string>
+    <string name="client_scan_again">QR を読み直す</string>
+    <string name="client_manual">または、アドレスを入力</string>
+    <string name="client_address">アドレス</string>
+    <string name="client_connect">接続</string>
+    <string name="client_this_device">この端末のサーバーを開く</string>
+    <string name="client_unreachable">%1$s に接続できません</string>
+    <string name="client_unreachable_hint">サーバーの端末で ANAS が起動しているか、同じ Wi-Fi / LAN につながっているか確認してください。サーバーの IP アドレスが変わったときは QR を読み直してください。</string>
+    <string name="client_forget">接続先を消す</string>
+    <string name="reload">再読み込み</string>
+    <string name="settings_mode">使い方</string>
+    <string name="settings_client">接続先（ブラウズ）</string>
+    <string name="client_none">まだ登録していません</string>
+    <string name="client_lan_only">アプリの中で開けるのは同じ LAN（プライベート IP）のページだけです。外部サイトへのリンクは普段のブラウザで開きます。</string>
 
     <string name="server">サーバー</string>
     <string name="server_running">起動中</string>
@@ -12,7 +44,7 @@
     <string name="server_start">開始</string>
     <string name="server_stop">停止</string>
     <string name="server_no_storage">先にストレージを追加してください</string>
-    <string name="server_open_hint">PC のブラウザで次の URL を開いてください（同じ Wi-Fi / LAN）</string>
+    <string name="server_open_hint">PC のブラウザで次の URL を開くか、スマホの ANAS で QR を読んでください（同じ Wi-Fi / LAN）</string>
     <string name="server_no_address">Wi-Fi などのネットワークに接続していません</string>
     <string name="copy">コピー</string>
     <string name="copied">コピーしました</string>
@@ -38,6 +70,9 @@
     <string name="extensions_spec">仕様書を開く</string>
     <string name="extension_full_access">NAS 全体へのアクセスを許可</string>
     <string name="extension_full_access_desc">この拡張機能は data フォルダの外も読み書きしようとしています。信頼できるものだけ許可してください。</string>
+    <string name="extension_network">インターネットへのアクセスを許可</string>
+    <string name="extension_network_desc">この端末から次のサイトにアクセスし、取ってきたデータを拡張機能に渡します。信頼できるものだけ許可してください。</string>
+    <string name="extension_network_added">許可したあとに新しいサイトが追加されました。使うにはもう一度許可してください。</string>
     <string name="extension_open">開く</string>
     <string name="extension_error">エラー: %1$s</string>
     <string name="extension_server_needed">開くにはサーバーを開始してください</string>
@@ -63,6 +98,14 @@
     <string name="read_only">読み取り専用モード</string>
     <string name="read_only_desc">アップロード・削除・名前の変更をすべて禁止します</string>
     <string name="restart_needed">サーバーの再起動後に反映されます</string>
+    <string name="settings_webdav">ネットワークドライブ（WebDAV）</string>
+    <string name="webdav_enable">WebDAV を使う</string>
+    <string name="webdav_enable_desc">PC にネットワークドライブとしてつなぐと、エクスプローラー・Finder・Claude Code などからふつうのファイルとして読み書きできます</string>
+    <string name="webdav_read_only">WebDAV は読み取り専用</string>
+    <string name="webdav_read_only_desc">WebDAV からの書き込み・削除・移動を禁止します（ブラウザの画面には影響しません）</string>
+    <string name="webdav_url">接続先</string>
+    <string name="webdav_auth">ユーザー名は何でもよく、パスワードはアクセスパスワードです</string>
+    <string name="webdav_auth_none">アクセスパスワードが未設定なので、同じ LAN の誰でも読み書きできます。上でパスワードを設定するのがおすすめです</string>
     <string name="settings_about">このアプリについて</string>
     <string name="version">バージョン</string>
     <string name="docs">使い方（Web サイト）</string>

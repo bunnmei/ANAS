@@ -33,6 +33,8 @@ data class InstalledExtension(
         scope = manifest?.scope ?: ExtensionManifest.Scope.SELF,
         enabled = id !in config.disabledExtensions,
         fullAccess = manifest?.scope == ExtensionManifest.Scope.ALL && id in config.fullAccessExtensions,
+        network = manifest?.network.orEmpty(),
+        networkAllowed = manifest?.network.orEmpty().filter { it in config.networkGrants[id].orEmpty() },
         error = error,
     )
 }

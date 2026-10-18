@@ -18,9 +18,9 @@ android {
         minSdk = 28
         targetSdk = 37
         // リリースのたびに 1 以上増やす
-        versionCode = 1
+        versionCode = 2
         // CI (GitHub Actions) ではタグ名 (v1.2.0 → 1.2.0) を使う
-        versionName = System.getenv("VERSION_NAME") ?: "1.0.0"
+        versionName = System.getenv("VERSION_NAME") ?: "1.0.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -135,6 +135,9 @@ dependencies {
     ksp(libs.hilt.compiler)
     implementation(libs.androidx.hilt.lifecycle.viewmodel.compose)
     implementation(libs.slf4j.nop)
+    // クライアント: QR を作る（ZXing）・読む（Google Play 開発者サービスのコードスキャナー。カメラ権限が要らない）
+    implementation(libs.zxing.core)
+    implementation(libs.play.services.code.scanner)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

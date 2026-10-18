@@ -1,3 +1,8 @@
 # Ktor がデバッガ検出に使う JVM 専用クラス（Android にはない）
 -dontwarn java.lang.management.ManagementFactory
 -dontwarn java.lang.management.RuntimeMXBean
+
+# WebView の JS から呼ぶメソッド（AnasWebView の AnasAndroid.save）。名前が変わると JS から見えなくなる
+-keepclassmembers class * {
+    @android.webkit.JavascriptInterface <methods>;
+}

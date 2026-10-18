@@ -79,6 +79,7 @@
           <tr><td><code>name</code></td><td>表示名</td></tr>
           <tr><td><code>scope</code></td><td><code>"self"</code>（既定）: data/ の中だけ。<code>"all"</code>: NAS 全体（アプリで許可したときだけ）</td></tr>
           <tr><td><code>externalOrigins</code></td><td>CDN など外部から読み込むときのオリジン（既定は外部通信なし）</td></tr>
+          <tr><td><code>network</code></td><td>ANAS（端末）経由でアクセスする外部サイト。例: <code>["https://www.amazon.co.jp", "https://*.media-amazon.com"]</code>（アプリで許可したときだけ）</td></tr>
         </tbody>
       </table>
     </div>
@@ -95,6 +96,18 @@
   await anas.writeJson("/settings.json", { theme: "dark" }, { overwrite: true });
 &lt;/script&gt;</code></pre>
     <p>ほかに <code>zipUrl</code>（フォルダごと zip でダウンロード）・<code>stat</code>・<code>exists</code>・<code>readText</code>・<code>readJson</code>・<code>listRecursive</code>・<code>mkdir</code>・<code>rename</code>・<code>remove</code> があります。<code>/_anas/base.css</code> を読み込むと ANAS と同じ見た目（ライト / ダーク自動切替）になります。</p>
+
+    <p><code>anas.search("3日以内に追加したPDF")</code> で、自分の <code>data/</code> の中のファイルを文章で探せます（ファイル名・種類・日時・サイズから）。</p>
+
+    <h3 id="network">外部サイトのデータを取ってくる</h3>
+    <p>ブラウザの JS からは、CORS を許可していないサイトの中身は読めません。<code>anas.json</code> の <code>network</code> に書いて、アプリの「拡張」タブで許可すると、端末が代わりに取りに行きます。</p>
+<pre><code>const res = await anas.fetch("https://www.amazon.co.jp/dp/4000000000");
+const doc = new DOMParser().parseFromString(await res.text(), "text/html");
+const title = doc.querySelector("#productTitle")?.textContent?.trim();
+
+// 画像などはブラウザを通さずに data/ へ保存
+await anas.fetchToFile(imageUrl, "/.covers/4000000000.jpg", { overwrite: true });</code></pre>
+    <p>使えるのは許可したサイトだけで、リダイレクト先も <code>network</code> に入っている必要があります。LAN 内の機器や端末自身にはアクセスしません。アプリの中（WebView）で開いたときも使えます。</p>
 
     <h2 id="install">4. 入れ方</h2>
     <ol class="steps">
@@ -113,6 +126,10 @@
       <div class="card">
         <h3>KiCad ライブラリ（.kicad_symbol_footprint）</h3>
         <p>.kicad_sym・.kicad_mod・3D モデルを種類ごとに整理して、SVG でプレビュー。シンボル1つだけを切り出してダウンロードできます。</p>
+      </div>
+      <div class="card">
+        <h3>ノート（.notes）</h3>
+        <p>Markdown（.md）のノートをプレビューで読み、ブラウザでそのまま編集。編集中は左右に並べてプレビュー、画像は貼り付けで保存、チェックボックスは押すだけで保存。</p>
       </div>
     </div>
 

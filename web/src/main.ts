@@ -1,4 +1,4 @@
-// NAS の Web UI。画面は「ファイル」（#/files/<volume>/<path>）と「拡張機能」（#/extensions）の2つ
+// NAS の Web UI。画面は「ファイル」（#/files/<volume>/<path>）・「検索」（#/search?q=）・「拡張機能」（#/extensions）
 import { $, h, icon, render, type IconName } from "./dom.js";
 import {
   AnasError,
@@ -8,6 +8,9 @@ import {
   type AnasClient,
   type Entry,
   type ExtensionInfo,
+  type SearchHit,
+  type SearchResult,
+  type SearchStatus,
 } from "./sdk.js";
 
 interface Info {
@@ -33,7 +36,7 @@ interface ListResponse {
   extension?: ExtensionInfo;
 }
 
-type Route = { kind: "files"; volume: string; path: string } | { kind: "extensions" };
+type Route = { kind: "files"; volume: string; path: string } | { kind: "search"; q: string } | { kind: "extensions" };
 
 const state = {
   info: null as Info | null,
@@ -113,9 +116,10 @@ function writable(volume: string): boolean {
 // ---- ルーティング ----
 
 function parseRoute(): Route {
-  const hash = location.hash.replace(/^#/, "");
+  const [hash = "", query = ""] = location.hash.replace(/^#/, "").split("?");
   const parts = hash.split("/").filter(Boolean).map(decodeURIComponent);
   if (parts[0] === "extensions") return { kind: "extensions" };
+  if (parts[0] === "search") return { kind: "search", q: new URLSearchParams(query).get("q") ?? "" };
   if (parts[0] === "files" && parts[1]) return { kind: "files", volume: parts[1], path: joinPath(...parts.slice(2)) };
   const first = state.volumes.find((v) => v.online) ?? state.volumes[0];
   return first ? { kind: "files", volume: first.id, path: "/" } : { kind: "extensions" };
@@ -126,10 +130,19 @@ function filesHash(volume: string, path: string): string {
   return `#/files/${encodeURIComponent(volume)}/${segs.join("/")}`;
 }
 
+function searchHash(q: string): string {
+  return `#/search?${new URLSearchParams({ q })}`;
+}
+
 async function route(): Promise<void> {
   const r = parseRoute();
   renderNav(r);
+  stopSearchPolling();
+  const input = $("#search-q") as HTMLInputElement;
+  if (r.kind === "search") input.value = r.q;
+  else if (document.activeElement !== input) input.value = "";
   if (r.kind === "extensions") await showExtensions();
+  else if (r.kind === "search") await showSearch(r.q);
   else await showFiles(r.volume, r.path);
 }
 
@@ -353,6 +366,152 @@ function fileRow(volume: string, e: Entry, canWrite: boolean, reload: () => void
   );
 }
 
+// ---- 検索 ----
+
+let searchPoll = 0;
+function stopSearchPolling(): void {
+  clearTimeout(searchPoll);
+  searchPoll = 0;
+}
+
+function volumeName(id: string): string {
+  return state.volumes.find((v) => v.id === id)?.name ?? id;
+}
+
+function statusLine(status: SearchStatus): HTMLElement {
+  const parts = status.volumes.map((v) =>
+    v.lastScan ? `${volumeName(v.volume)}: ${v.files.toLocaleString()} 件（${formatDate(v.lastScan)} 更新）` : `${volumeName(v.volume)}: 未作成`,
+  );
+  const text = status.running
+    ? `索引を作成中…（${status.volume ? volumeName(status.volume) + "・" : ""}${status.scanned.toLocaleString()} 件）`
+    : parts.length > 0
+      ? "索引: " + parts.join(" / ")
+      : "索引はまだありません";
+  return h(
+    "div",
+    { class: "search-status muted small" },
+    h("span", {}, text),
+    !status.running &&
+      h(
+        "button",
+        {
+          class: "btn btn--text",
+          onclick: async () => {
+            try {
+              await postJson("search/rescan", {});
+              void route();
+            } catch (e) {
+              toast(errorMessage(e), true);
+            }
+          },
+        },
+        icon("refresh"),
+        "索引を作り直す",
+      ),
+  );
+}
+
+function searchRow(hit: SearchHit, showAdded: boolean): HTMLTableRowElement {
+  const c = client(hit.volume);
+  const parent = hit.path.split("/").slice(0, -1).join("/") || "/";
+  const entry: Entry = { name: hit.name, path: hit.path, isDir: hit.isDir, size: hit.size, modified: hit.modified, mime: hit.mime };
+  const link = hit.isDir
+    ? h("a", { href: filesHash(hit.volume, hit.path), class: "files__name" }, icon("folder"), h("span", {}, hit.name))
+    : h("a", { href: c.fileUrl(hit.path), target: "_blank", rel: "noopener", class: "files__name" }, icon(iconFor(entry)), h("span", {}, hit.name));
+  const where = h("div", { class: "where" }, h("a", { href: filesHash(hit.volume, parent) }, `${volumeName(hit.volume)}:${parent}`));
+  const date = showAdded ? (hit.added ?? 0) : hit.modified;
+  return h(
+    "tr",
+    {},
+    h("td", {}, link, where),
+    h("td", { class: "num" }, hit.isDir ? "" : formatBytes(hit.size)),
+    h("td", { class: "date" }, formatDate(date)),
+    h(
+      "td",
+      { class: "files__actions" },
+      hit.isDir
+        ? h("a", { class: "btn btn--icon", href: filesHash(hit.volume, hit.path), title: "開く" }, icon("open"))
+        : h("a", { class: "btn btn--icon", href: c.fileUrl(hit.path, { download: true }), title: "ダウンロード", download: hit.name }, icon("download")),
+    ),
+  );
+}
+
+async function showSearch(q: string): Promise<void> {
+  const main = $("#main");
+  if (!q.trim()) {
+    render(
+      main,
+      h("h1", {}, "ファイルを探す"),
+      h("p", { class: "muted" }, "ふつうの文章で探せます。ファイル名・フォルダ名・種類・日時・サイズから探します（ファイルの中身は見ません）。"),
+      h(
+        "ul",
+        { class: "muted" },
+        ...["3日以内にアップロードしたファイル", "去年の確定申告のPDF", "仕事の議事録のメモ", "先週編集したエクセル", "1GB以上の動画 大きい順"].map((ex) =>
+          h("li", {}, h("a", { href: searchHash(ex) }, ex)),
+        ),
+      ),
+    );
+    return;
+  }
+  let res: SearchResult;
+  try {
+    const params = new URLSearchParams({ q, limit: "100" });
+    if (state.showHidden) params.set("hidden", "1");
+    res = await api<SearchResult>(`search?${params}`);
+  } catch (e) {
+    render(main, h("div", { class: "empty" }, errorMessage(e)));
+    return;
+  }
+  const showAdded = res.query.timeField === "added";
+  const count = res.total > 1000 ? "1000 件以上" : `${res.total} 件`;
+  const chips = res.query.summary.length > 0
+    ? h("div", { class: "chips", "aria-label": "読み取った条件" }, ...res.query.summary.map((s) => h("span", { class: "chip" }, s)))
+    : h("p", { class: "muted" }, "条件を読み取れませんでした。ファイル名の一部や「PDF」「先週」などを入れてみてください。");
+  const list =
+    res.hits.length > 0
+      ? h(
+          "table",
+          { class: "files" },
+          h(
+            "thead",
+            {},
+            h("tr", {}, h("th", {}, "名前・場所"), h("th", { class: "num" }, "サイズ"), h("th", { class: "date" }, showAdded ? "追加日時" : "更新日時"), h("th", {})),
+          ),
+          h("tbody", {}, ...res.hits.map((hit) => searchRow(hit, showAdded))),
+        )
+      : h(
+          "div",
+          { class: "empty" },
+          res.status.running || res.status.volumes.every((v) => !v.lastScan)
+            ? "見つかりません。いま索引を作成中なので、しばらくしてからもう一度試してください。"
+            : "見つかりませんでした。",
+        );
+  render(
+    main,
+    h("h1", {}, `「${q}」の検索結果`),
+    chips,
+    res.fuzzy && h("p", { class: "muted small" }, "完全に一致するものがないので、似た名前のものを表示しています。"),
+    res.hits.length > 0 && h("p", { class: "muted small" }, res.hits.length < res.total ? `${count}（上位 ${res.hits.length} 件を表示）` : count),
+    list,
+    statusLine(res.status),
+  );
+
+  // 索引の作成中は、終わるまでときどき状態を見て、終わったら検索し直す
+  if (res.status.running) {
+    const poll = async () => {
+      const status = await api<SearchStatus>("search/status").catch(() => null);
+      if (parseRoute().kind !== "search") return;
+      if (status && !status.running) {
+        void route();
+        return;
+      }
+      if (status) main.querySelector(".search-status")?.replaceWith(statusLine(status));
+      searchPoll = window.setTimeout(() => void poll(), 3000);
+    };
+    searchPoll = window.setTimeout(() => void poll(), 3000);
+  }
+}
+
 // ---- アップロード ----
 
 interface UploadJob {
@@ -528,6 +687,14 @@ async function showExtensions(): Promise<void> {
       x.error && h("p", { class: "error" }, x.error),
       !x.error && !x.enabled && h("p", { class: "muted" }, "無効（アプリの「拡張」タブで有効にできます）"),
       !x.error && x.scope === "all" && h("p", { class: "muted small" }, x.fullAccess ? "NAS 全体へのアクセス: 許可" : "NAS 全体へのアクセス: 未許可（アプリで許可できます）"),
+      !x.error && x.network.length > 0 &&
+        h(
+          "p",
+          { class: "muted small" },
+          x.network.every((o) => x.networkAllowed.includes(o))
+            ? `インターネットへのアクセス: 許可（${x.network.map((o) => o.replace("https://", "")).join(", ")}）`
+            : "インターネットへのアクセス: 未許可（アプリで許可できます）",
+        ),
       h(
         "div",
         { class: "card__actions" },
@@ -602,6 +769,7 @@ function showLogin(): void {
     }
   });
   render($("#nav"));
+  $("#search").hidden = true;
   render($("#main"), form);
   input.focus();
 }
@@ -635,6 +803,13 @@ async function main(): Promise<void> {
   if (state.info.readOnly) $("#readonly").hidden = false;
   [state.volumes, state.extensions] = await Promise.all([api<Volume[]>("volumes"), api<ExtensionInfo[]>("extensions")]);
   setupDragAndDrop();
+  $("#search").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const q = ($("#search-q") as HTMLInputElement).value.trim();
+    const next = searchHash(q);
+    if (location.hash === next) void route();
+    else location.hash = next;
+  });
   window.addEventListener("hashchange", () => void route());
   await route();
 }

@@ -24,13 +24,26 @@ import javax.inject.Singleton
 
 enum class ThemeMode { SYSTEM, LIGHT, DARK }
 
+/** この端末の使い方。SERVER はサーバー＋クライアント、CLIENT はほかの端末の NAS を見るだけ */
+enum class AppMode { SERVER, CLIENT }
+
 data class AppSettings(
+    /** DataStore から読み終わったら true（読み込み前の既定値で画面を出さないため） */
+    val loaded: Boolean = false,
+    /** null なら初回起動で、まだ選んでいない */
+    val mode: AppMode? = null,
+    /** クライアントで開くサーバーのトップ（`http://192.168.1.108:8080/`）。空なら未設定 */
+    val serverUrl: String = "",
     val theme: ThemeMode = ThemeMode.SYSTEM,
     val port: Int = ServerConfig.DEFAULT_PORT,
     val password: String = "",
     val readOnly: Boolean = false,
     val disabledExtensions: Set<String> = emptySet(),
     val fullAccessExtensions: Set<String> = emptySet(),
+    /** 拡張機能 ID → 外部アクセスを許可したサイト（anas.json の `network`） */
+    val networkGrants: Map<String, Set<String>> = emptyMap(),
+    val webDavEnabled: Boolean = false,
+    val webDavReadOnly: Boolean = false,
 ) {
     fun toServerConfig(appVersion: String) = ServerConfig(
         port = port,
@@ -38,6 +51,9 @@ data class AppSettings(
         readOnly = readOnly,
         disabledExtensions = disabledExtensions,
         fullAccessExtensions = fullAccessExtensions,
+        networkGrants = networkGrants,
+        webDavEnabled = webDavEnabled,
+        webDavReadOnly = webDavReadOnly,
         appVersion = appVersion,
     )
 }
@@ -55,12 +71,18 @@ class DataStoreSettingsRepository @Inject constructor(
 ) : SettingsRepository {
 
     private object Keys {
+        val MODE = stringPreferencesKey("mode")
+        val SERVER_URL = stringPreferencesKey("server_url")
         val THEME = stringPreferencesKey("theme")
         val PORT = intPreferencesKey("port")
         val PASSWORD = stringPreferencesKey("password")
         val READ_ONLY = booleanPreferencesKey("read_only")
         val DISABLED = stringSetPreferencesKey("disabled_extensions")
         val FULL_ACCESS = stringSetPreferencesKey("full_access_extensions")
+        /** `"<id> <origin>"` の集合（ID とオリジンには空白が入らない） */
+        val NETWORK = stringSetPreferencesKey("network_grants")
+        val WEBDAV = booleanPreferencesKey("webdav_enabled")
+        val WEBDAV_READ_ONLY = booleanPreferencesKey("webdav_read_only")
     }
 
     private val flow = dataStore.data
@@ -74,21 +96,35 @@ class DataStoreSettingsRepository @Inject constructor(
     override suspend fun update(transform: (AppSettings) -> AppSettings) {
         dataStore.edit { prefs ->
             val next = transform(prefs.toSettings())
+            next.mode?.let { prefs[Keys.MODE] = it.name } ?: prefs.remove(Keys.MODE)
+            prefs[Keys.SERVER_URL] = next.serverUrl
             prefs[Keys.THEME] = next.theme.name
             prefs[Keys.PORT] = next.port
             prefs[Keys.PASSWORD] = next.password
             prefs[Keys.READ_ONLY] = next.readOnly
             prefs[Keys.DISABLED] = next.disabledExtensions
             prefs[Keys.FULL_ACCESS] = next.fullAccessExtensions
+            prefs[Keys.WEBDAV] = next.webDavEnabled
+            prefs[Keys.WEBDAV_READ_ONLY] = next.webDavReadOnly
+            prefs[Keys.NETWORK] = next.networkGrants.flatMap { (id, origins) -> origins.map { "$id $it" } }.toSet()
         }
     }
 
     private fun Preferences.toSettings() = AppSettings(
+        loaded = true,
+        mode = this[Keys.MODE]?.let { runCatching { AppMode.valueOf(it) }.getOrNull() },
+        serverUrl = this[Keys.SERVER_URL].orEmpty(),
         theme = this[Keys.THEME]?.let { runCatching { ThemeMode.valueOf(it) }.getOrNull() } ?: ThemeMode.SYSTEM,
         port = this[Keys.PORT] ?: ServerConfig.DEFAULT_PORT,
         password = this[Keys.PASSWORD].orEmpty(),
         readOnly = this[Keys.READ_ONLY] ?: false,
         disabledExtensions = this[Keys.DISABLED].orEmpty(),
         fullAccessExtensions = this[Keys.FULL_ACCESS].orEmpty(),
+        networkGrants = this[Keys.NETWORK].orEmpty()
+            .mapNotNull { entry -> entry.split(' ', limit = 2).takeIf { it.size == 2 } }
+            .groupBy({ it[0] }, { it[1] })
+            .mapValues { it.value.toSet() },
+        webDavEnabled = this[Keys.WEBDAV] ?: false,
+        webDavReadOnly = this[Keys.WEBDAV_READ_ONLY] ?: false,
     )
 }

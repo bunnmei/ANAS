@@ -29,6 +29,11 @@ data class ExtensionManifest(
     val scope: Scope = Scope.SELF,
     /** CSP で許可する外部オリジン（例: `https://cdn.jsdelivr.net`）。既定は外部通信なし */
     val externalOrigins: List<String> = emptyList(),
+    /**
+     * サーバー経由（`/x/<id>/api/fetch`）でアクセスする外部サイト（例: `https://www.amazon.co.jp`。`*.` から始めるとサブドメインすべて）。
+     * アプリで許可したものだけ有効。既定はなし
+     */
+    val network: List<String> = emptyList(),
 ) {
     @Serializable
     enum class Scope {
@@ -48,6 +53,9 @@ data class ExtensionManifest(
 
         private val ID_PATTERN = Regex("^[a-z0-9][a-z0-9_-]{0,63}$")
         private val ORIGIN_PATTERN = Regex("^https://[A-Za-z0-9.-]+(:[0-9]{1,5})?$")
+        // `*.` は「そのドメインのサブドメインすべて」。`*.com` のような広すぎるものは書けない
+        private val NETWORK_PATTERN =
+            Regex("^https://(\\*\\.[A-Za-z0-9-]+(\\.[A-Za-z0-9-]+)+|[A-Za-z0-9-]+(\\.[A-Za-z0-9-]+)*)(:[0-9]{1,5})?$")
         private val json = Json { ignoreUnknownKeys = true }
 
         /** フォルダ名（`.jisui`）から ID（`jisui`）を取り出す。拡張機能のフォルダ名でなければ null */
@@ -74,6 +82,9 @@ data class ExtensionManifest(
         icon?.let { SafePath.parse(it) }
         for (origin in externalOrigins) {
             require(ORIGIN_PATTERN.matches(origin)) { "\"externalOrigins\" は https://host[:port] の形で書いてください: $origin" }
+        }
+        for (origin in network) {
+            require(NETWORK_PATTERN.matches(origin)) { "\"network\" は https://host[:port] か https://*.host の形で書いてください: $origin" }
         }
     }
 }

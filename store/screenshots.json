@@ -1,0 +1,18 @@
+{
+  "ja": [
+    { "img": "raw/01.png", "title": "余った Android を NAS に", "sub": "USB ドライブや SD カードを同じ LAN に公開" },
+    { "img": "raw/02.png", "title": "PC からもスマホからも", "sub": "ブラウザでアップロード・ダウンロード・整理" },
+    { "img": "raw/03.png", "title": "ふつうの文章で探せる", "sub": "「3日以内にアップロードした」で探せる" },
+    { "img": "raw/04.png", "title": "拡張機能で自分好みに", "sub": "フォルダごとに専用の画面を HTML で作れる" },
+    { "img": "raw/05.png", "title": "Markdown ノートも", "sub": "拡張機能の例：NAS の中のメモを読み書き" },
+    { "img": "raw/06.png", "title": "PC のドライブとしてつなぐ", "sub": "WebDAV でエクスプローラーや Finder から" }
+  ],
+  "en": [
+    { "img": "raw/01.png", "title": "Your Android, now a NAS", "sub": "Share USB drives and SD cards on your LAN" },
+    { "img": "raw/02.png", "title": "From your PC or phone", "sub": "Upload, download and organize in the browser" },
+    { "img": "raw/03.png", "title": "Search in plain words", "sub": "\"Uploaded in the last 3 days\" just works" },
+    { "img": "raw/04.png", "title": "Make it yours with extensions", "sub": "Give any folder its own HTML screen" },
+    { "img": "raw/05.png", "title": "Markdown notes, too", "sub": "An example extension that lives on your NAS" },
+    { "img": "raw/06.png", "title": "Mount it as a drive", "sub": "WebDAV for Explorer, Finder and more" }
+  ]
+}

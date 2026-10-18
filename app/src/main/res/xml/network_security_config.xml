@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  クライアント（WebView・ダウンロード）は LAN の NAS に http で接続する。
+  IP の範囲では指定できないので http を許可し、LAN 以外を開かない判定はアプリ側（LanUrls）で行う。
+-->
+<network-security-config xmlns:tools="http://schemas.android.com/tools">
+    <base-config
+        cleartextTrafficPermitted="true"
+        tools:ignore="InsecureBaseConfiguration" />
+</network-security-config>

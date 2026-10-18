@@ -26,6 +26,43 @@ object NetworkGuard {
         }
     }
 
+    /**
+     * インターネット上のアドレスか。拡張機能の外部アクセス（[OutboundHttp]）で、
+     * LAN の機器（ルーターの管理画面など）や ANAS 自身に向かわせないために使う
+     */
+    fun isPublicAddress(addr: InetAddress): Boolean {
+        if (addr.isAnyLocalAddress || addr.isLoopbackAddress || addr.isLinkLocalAddress ||
+            addr.isSiteLocalAddress || addr.isMulticastAddress
+        ) return false
+        val b = addr.address
+        return when (addr) {
+            is Inet4Address -> !isReservedV4(b)
+            is Inet6Address -> {
+                if ((b[0].toInt() and 0xfe) == 0xfc) return false // fc00::/7 (ULA)
+                val mapped = (0 until 10).all { b[it] == 0.toByte() } && b[10] == 0xff.toByte() && b[11] == 0xff.toByte()
+                if (mapped) return isPublicAddress(InetAddress.getByAddress(b.copyOfRange(12, 16)))
+                // 6to4 (2002::/16) と NAT64 (64:ff9b::/96) は中の IPv4 で判定する
+                if (b[0] == 0x20.toByte() && b[1] == 0x02.toByte()) return isPublicAddress(InetAddress.getByAddress(b.copyOfRange(2, 6)))
+                val nat64 = b[0] == 0.toByte() && b[1] == 0x64.toByte() && b[2] == 0xff.toByte() && b[3] == 0x9b.toByte() &&
+                    (4 until 12).all { b[it] == 0.toByte() }
+                if (nat64) return isPublicAddress(InetAddress.getByAddress(b.copyOfRange(12, 16)))
+                true
+            }
+            else -> false
+        }
+    }
+
+    /** 0/8, 100.64/10 (CGNAT), 192.0.0/24, 198.18/15, 240/4 など、上の判定で拾えない特殊用途の IPv4 */
+    private fun isReservedV4(b: ByteArray): Boolean {
+        val a0 = b[0].toInt() and 0xff
+        val a1 = b[1].toInt() and 0xff
+        val a2 = b[2].toInt() and 0xff
+        return a0 == 0 || a0 >= 240 ||
+            (a0 == 100 && a1 in 64..127) ||
+            (a0 == 192 && a1 == 0 && a2 == 0) ||
+            (a0 == 198 && (a1 == 18 || a1 == 19))
+    }
+
     private fun isMappedPrivateV4(b: ByteArray): Boolean {
         val mapped = (0 until 10).all { b[it] == 0.toByte() } && b[10] == 0xff.toByte() && b[11] == 0xff.toByte()
         if (!mapped) return false

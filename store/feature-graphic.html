@@ -1,0 +1,222 @@
+<!doctype html>
+<!--
+  Google Play のフィーチャーグラフィック（1024×500）。store/render.py で PNG にする。
+  言語は URL の末尾で切り替える：feature-graphic.html#ja / #en
+  絵はすべて手で書いた SVG（生成 AI は使っていない）。色はアプリのアイコンに合わせている。
+-->
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@500;700;900&family=JetBrains+Mono:wght@500;700&display=swap">
+  <style>
+    :root {
+      --bg: #08232e;
+      --bg2: #0c3140;
+      --rack: #10394a;
+      --rack-edge: #1b5163;
+      --green: #3ddc84;
+      --green-dark: #27b46a;
+      --text: #e8f6ef;
+      --muted: #9cc3b6;
+    }
+    html, body { margin: 0; }
+    body {
+      width: 1024px; height: 500px; overflow: hidden; position: relative;
+      background: var(--bg); color: var(--text);
+      font-family: "Noto Sans JP", sans-serif;
+    }
+    svg.scene { position: absolute; inset: 0; }
+    .text { position: absolute; left: 60px; top: 0; bottom: 0; width: 380px; display: flex; flex-direction: column; justify-content: center; }
+    .brand { display: flex; align-items: center; gap: 18px; margin-bottom: 22px; }
+    .brand img { width: 84px; height: 84px; border-radius: 22px; box-shadow: 0 0 0 2px rgba(61, 220, 132, .25); }
+    h1 { margin: 0; font-size: 64px; font-weight: 900; letter-spacing: 0.02em; line-height: 1; }
+    p { margin: 0; font-size: 30px; font-weight: 700; line-height: 1.45; }
+    p em { font-style: normal; color: var(--green); }
+    .tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 22px; }
+    .tags span {
+      font-size: 16px; font-weight: 500; padding: 5px 12px; border-radius: 999px;
+      border: 1.5px solid rgba(61, 220, 132, .45); color: var(--muted);
+    }
+    [data-lang] { display: none; }
+    html[lang="ja"] [data-lang="ja"], html[lang="en"] [data-lang="en"] { display: block; }
+    html[lang="ja"] .tags[data-lang="ja"], html[lang="en"] .tags[data-lang="en"] { display: flex; }
+    .mono { font-family: "JetBrains Mono", monospace; }
+  </style>
+  <script>
+    document.documentElement.lang = location.hash === "#en" ? "en" : "ja";
+  </script>
+</head>
+<body>
+  <svg class="scene" viewBox="0 0 1024 500" aria-hidden="true">
+    <defs>
+      <linearGradient id="room" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#0c3140"/>
+        <stop offset="1" stop-color="#08232e"/>
+      </linearGradient>
+      <!-- ラック1台。LED の色と点き方は台ごとに変える -->
+      <g id="slot">
+        <rect width="92" height="22" rx="3" fill="#0a2a37" stroke="#1b5163" stroke-width="1.5"/>
+        <rect x="8" y="9" width="38" height="4" rx="2" fill="#1f5d70"/>
+      </g>
+    </defs>
+
+    <rect width="1024" height="500" fill="url(#room)"/>
+
+    <!-- 床（奥へすぼまる線） -->
+    <path d="M430 412 H1024 V500 H430 Z" fill="#071d26"/>
+    <g stroke="#123b4a" stroke-width="1.5">
+      <path d="M430 412 H1024"/>
+      <path d="M430 440 H1024"/><path d="M430 474 H1024"/>
+      <path d="M560 412 L520 500"/><path d="M690 412 L680 500"/><path d="M820 412 L840 500"/><path d="M950 412 L1000 500"/>
+    </g>
+
+    <!-- 奥のラック（暗く小さく） -->
+    <g opacity=".45">
+      <rect x="470" y="150" width="64" height="262" rx="5" fill="#0d3241" stroke="#174a5b" stroke-width="2"/>
+      <rect x="540" y="150" width="64" height="262" rx="5" fill="#0d3241" stroke="#174a5b" stroke-width="2"/>
+      <g fill="#3ddc84">
+        <circle cx="520" cy="172" r="2.2"/><circle cx="520" cy="196" r="2.2"/><circle cx="520" cy="268" r="2.2"/><circle cx="520" cy="340" r="2.2"/>
+        <circle cx="590" cy="184" r="2.2"/><circle cx="590" cy="232" r="2.2"/><circle cx="590" cy="304" r="2.2"/>
+      </g>
+      <g stroke="#174a5b" stroke-width="2">
+        <path d="M478 180 H526 M478 204 H526 M478 228 H526 M478 252 H526 M478 276 H526 M478 300 H526 M478 324 H526 M478 348 H526 M478 372 H526"/>
+        <path d="M548 192 H596 M548 216 H596 M548 240 H596 M548 264 H596 M548 288 H596 M548 312 H596 M548 336 H596 M548 360 H596 M548 384 H596"/>
+      </g>
+    </g>
+
+    <!-- 手前のラック 3 台 -->
+    <g>
+      <rect x="760" y="58" width="112" height="354" rx="8" fill="#10394a" stroke="#1b5163" stroke-width="2.5"/>
+      <rect x="884" y="58" width="112" height="354" rx="8" fill="#10394a" stroke="#1b5163" stroke-width="2.5"/>
+      <rect x="772" y="44" width="88" height="14" rx="4" fill="#1b5163"/>
+      <rect x="896" y="44" width="88" height="14" rx="4" fill="#1b5163"/>
+      <!-- スロット -->
+      <g>
+        <use href="#slot" x="770" y="72"/><use href="#slot" x="770" y="100"/><use href="#slot" x="770" y="128"/>
+        <use href="#slot" x="770" y="156"/><use href="#slot" x="770" y="240"/><use href="#slot" x="770" y="268"/>
+        <use href="#slot" x="770" y="296"/><use href="#slot" x="770" y="324"/><use href="#slot" x="770" y="352"/><use href="#slot" x="770" y="380"/>
+        <use href="#slot" x="894" y="72"/><use href="#slot" x="894" y="100"/><use href="#slot" x="894" y="128"/><use href="#slot" x="894" y="156"/>
+        <use href="#slot" x="894" y="184"/><use href="#slot" x="894" y="212"/><use href="#slot" x="894" y="240"/><use href="#slot" x="894" y="268"/>
+        <use href="#slot" x="894" y="296"/><use href="#slot" x="894" y="324"/><use href="#slot" x="894" y="352"/><use href="#slot" x="894" y="380"/>
+      </g>
+      <!-- 空いているスロット（ここにドライブを差し込む） -->
+      <rect x="770" y="184" width="92" height="50" rx="3" fill="#061a22" stroke="#3ddc84" stroke-width="1.5" stroke-dasharray="4 4"/>
+      <!-- LED -->
+      <g>
+        <circle cx="850" cy="83" r="3" fill="#3ddc84"/><circle cx="850" cy="111" r="3" fill="#3ddc84"/><circle cx="850" cy="139" r="3" fill="#ffc94a"/>
+        <circle cx="850" cy="167" r="3" fill="#3ddc84"/><circle cx="850" cy="251" r="3" fill="#3ddc84"/><circle cx="850" cy="279" r="3" fill="#57c7ff"/>
+        <circle cx="850" cy="307" r="3" fill="#3ddc84"/><circle cx="850" cy="335" r="3" fill="#3ddc84"/><circle cx="850" cy="363" r="3" fill="#2a6b55"/><circle cx="850" cy="391" r="3" fill="#3ddc84"/>
+        <circle cx="974" cy="83" r="3" fill="#3ddc84"/><circle cx="974" cy="111" r="3" fill="#57c7ff"/><circle cx="974" cy="139" r="3" fill="#3ddc84"/><circle cx="974" cy="167" r="3" fill="#3ddc84"/>
+        <circle cx="974" cy="195" r="3" fill="#2a6b55"/><circle cx="974" cy="223" r="3" fill="#3ddc84"/><circle cx="974" cy="251" r="3" fill="#ffc94a"/><circle cx="974" cy="279" r="3" fill="#3ddc84"/>
+        <circle cx="974" cy="307" r="3" fill="#3ddc84"/><circle cx="974" cy="335" r="3" fill="#57c7ff"/><circle cx="974" cy="363" r="3" fill="#3ddc84"/><circle cx="974" cy="391" r="3" fill="#3ddc84"/>
+        <circle cx="838" cy="83" r="3" fill="#2a6b55"/><circle cx="838" cy="279" r="3" fill="#3ddc84"/><circle cx="962" cy="139" r="3" fill="#2a6b55"/><circle cx="962" cy="307" r="3" fill="#3ddc84"/>
+      </g>
+      <!-- ラックの間を走るケーブル -->
+      <path d="M872 118 C 878 140, 878 160, 884 176" fill="none" stroke="#57c7ff" stroke-width="2.5" stroke-linecap="round"/>
+      <path d="M872 300 C 880 320, 876 340, 884 356" fill="none" stroke="#ffc94a" stroke-width="2.5" stroke-linecap="round"/>
+    </g>
+
+    <!-- 拡張機能のカード（ラックに差し込むモジュール） -->
+    <g font-family="JetBrains Mono, monospace" font-weight="700" font-size="14">
+      <!-- 接続線 -->
+      <g fill="none" stroke="#3ddc84" stroke-width="1.6" stroke-dasharray="3 5" opacity=".7">
+        <path d="M600 84 C 680 84, 700 120, 770 112"/>
+        <path d="M640 132 C 700 140, 720 150, 770 140"/>
+        <path d="M600 180 C 680 186, 720 170, 770 168"/>
+      </g>
+      <g transform="translate(486 64)">
+        <rect width="118" height="40" rx="10" fill="#0f3a2c" stroke="#3ddc84" stroke-width="2"/>
+        <path d="M12 12 h10 a3 3 0 0 1 3 3 v14 h-10 a3 3 0 0 0 -3 -3 z M25 15 a3 3 0 0 1 3 -3 h10 v14 a3 3 0 0 0 -3 3 h-10" fill="none" stroke="#3ddc84" stroke-width="2" stroke-linejoin="round"/>
+        <text x="48" y="25" fill="#e8f6ef">.jisui</text>
+      </g>
+      <g transform="translate(518 112)">
+        <rect width="126" height="40" rx="10" fill="#0f3a2c" stroke="#3ddc84" stroke-width="2"/>
+        <rect x="13" y="12" width="16" height="16" rx="2" fill="none" stroke="#3ddc84" stroke-width="2"/>
+        <path d="M17 8 v4 M21 8 v4 M25 8 v4 M17 28 v4 M21 28 v4 M25 28 v4 M9 16 h4 M9 20 h4 M9 24 h4 M29 16 h4 M29 20 h4 M29 24 h4" stroke="#3ddc84" stroke-width="1.6"/>
+        <text x="44" y="25" fill="#e8f6ef">.kicad</text>
+      </g>
+      <g transform="translate(482 160)">
+        <rect width="118" height="40" rx="10" fill="#0f3a2c" stroke="#3ddc84" stroke-width="2"/>
+        <rect x="12" y="10" width="20" height="20" rx="3" fill="none" stroke="#3ddc84" stroke-width="2"/>
+        <path d="M16 23 v-7 l3 4 l3 -4 v7 M26 16 v7 M24 21 l2 2 l2 -2" fill="none" stroke="#3ddc84" stroke-width="1.6" stroke-linejoin="round"/>
+        <text x="44" y="25" fill="#e8f6ef">.notes</text>
+      </g>
+      <!-- 自分で作れる「＋」 -->
+      <g transform="translate(530 208)">
+        <rect width="104" height="40" rx="10" fill="none" stroke="#9cc3b6" stroke-width="2" stroke-dasharray="5 5"/>
+        <path d="M18 14 v12 M12 20 h12" stroke="#9cc3b6" stroke-width="2.4" stroke-linecap="round"/>
+        <text x="36" y="25" fill="#9cc3b6">.yours</text>
+      </g>
+    </g>
+
+    <!-- サーバーになっているスマホと USB SSD -->
+    <g transform="translate(-80 0)">
+      <rect x="610" y="262" width="78" height="150" rx="14" fill="#04131a" stroke="#1b5163" stroke-width="2.5"/>
+      <rect x="617" y="276" width="64" height="122" rx="6" fill="#0c3140"/>
+      <g fill="#3ddc84">
+        <rect x="623" y="284" width="52" height="7" rx="3.5" opacity=".9"/>
+        <rect x="623" y="300" width="8" height="8" rx="2" opacity=".7"/><rect x="635" y="302" width="36" height="4" rx="2" opacity=".45"/>
+        <rect x="623" y="314" width="8" height="8" rx="2" opacity=".7"/><rect x="635" y="316" width="30" height="4" rx="2" opacity=".45"/>
+        <rect x="623" y="328" width="8" height="8" rx="2" opacity=".7"/><rect x="635" y="330" width="34" height="4" rx="2" opacity=".45"/>
+        <rect x="623" y="342" width="8" height="8" rx="2" opacity=".7"/><rect x="635" y="344" width="26" height="4" rx="2" opacity=".45"/>
+      </g>
+      <circle cx="649" cy="378" r="9" fill="none" stroke="#3ddc84" stroke-width="2"/>
+      <path d="M645 378 h8 M649 374 v8" stroke="#3ddc84" stroke-width="2" stroke-linecap="round"/>
+      <!-- USB ケーブルと SSD -->
+      <path d="M649 412 C 650 430, 700 432, 712 418" fill="none" stroke="#57c7ff" stroke-width="3" stroke-linecap="round"/>
+      <rect x="704" y="396" width="44" height="22" rx="5" fill="#1b5163" stroke="#57c7ff" stroke-width="2"/>
+      <circle cx="740" cy="407" r="2.5" fill="#57c7ff"/>
+    </g>
+
+    <!-- 一生懸命ドライブを差し込みに行くドロイドくん -->
+    <g transform="translate(706 142) rotate(-6)">
+      <!-- 影 -->
+      <ellipse cx="2" cy="240" rx="40" ry="6" fill="#04131a" opacity=".7" transform="rotate(6)"/>
+      <!-- 足（走っている） -->
+      <rect x="-24" y="150" width="17" height="44" rx="8.5" fill="#27b46a" transform="rotate(18 -16 150)"/>
+      <rect x="8" y="150" width="17" height="44" rx="8.5" fill="#3ddc84" transform="rotate(-22 16 150)"/>
+      <!-- 体（アイコンと同じサーバーの体） -->
+      <rect x="-40" y="86" width="80" height="22" rx="3" fill="#3ddc84"/>
+      <rect x="-40" y="111" width="80" height="22" rx="3" fill="#36cc7a"/>
+      <rect x="-40" y="136" width="80" height="20" rx="3" fill="#2fbf71"/>
+      <g fill="#0b2a36">
+        <rect x="-32" y="95" width="30" height="3.5" rx="1.75"/><rect x="-32" y="120" width="30" height="3.5" rx="1.75"/><rect x="-32" y="144" width="30" height="3.5" rx="1.75"/>
+        <rect x="18" y="93" width="6" height="6"/><rect x="18" y="118" width="6" height="6"/><rect x="18" y="142" width="6" height="6"/>
+      </g>
+      <rect x="28" y="93" width="6" height="6" fill="#eafff4"/><rect x="28" y="118" width="6" height="6" fill="#eafff4"/><rect x="28" y="142" width="6" height="6" fill="#eafff4"/>
+      <!-- 頭 -->
+      <path d="M-40 80 a40 40 0 0 1 80 0 z" fill="#3ddc84"/>
+      <path d="M-20 46 l-12 -20 M20 46 l12 -20" stroke="#3ddc84" stroke-width="5" stroke-linecap="round"/>
+      <circle cx="-15" cy="62" r="4.5" fill="#0b2a36"/><circle cx="15" cy="62" r="4.5" fill="#0b2a36"/>
+      <!-- がんばっている眉 -->
+      <path d="M-22 52 l12 4 M22 52 l-12 4" stroke="#0b2a36" stroke-width="3" stroke-linecap="round"/>
+      <!-- 腕（前に伸ばしてドライブを持つ） -->
+      <rect x="40" y="88" width="16" height="44" rx="8" fill="#3ddc84" transform="rotate(-78 48 92)"/>
+      <rect x="-56" y="90" width="16" height="44" rx="8" fill="#27b46a" transform="rotate(-60 -48 94)"/>
+      <!-- 持っているドライブ -->
+      <g transform="translate(64 64) rotate(6)">
+        <rect width="74" height="34" rx="4" fill="#1b5163" stroke="#57c7ff" stroke-width="2.5"/>
+        <rect x="8" y="14" width="34" height="5" rx="2.5" fill="#57c7ff" opacity=".6"/>
+        <circle cx="62" cy="17" r="3.5" fill="#3ddc84"/>
+      </g>
+      <!-- 汗と勢いの線 -->
+      <path d="M-50 40 q-6 9 0 13 q6 -4 0 -13 z" fill="#8fe3ff"/>
+      <path d="M-58 62 q-5 8 0 11 q5 -3 0 -11 z" fill="#8fe3ff" opacity=".8"/>
+      <g stroke="#9cc3b6" stroke-width="3" stroke-linecap="round" opacity=".6">
+        <path d="M-66 104 h-20"/><path d="M-62 122 h-28"/><path d="M-66 140 h-16"/>
+      </g>
+    </g>
+  </svg>
+
+  <div class="text">
+    <div class="brand">
+      <img src="../icons/android_nas_icon.png" alt="">
+      <h1>ANAS</h1>
+    </div>
+    <p data-lang="ja">余っている Android を、<br><em>自分で育てる NAS</em> に。</p>
+    <p data-lang="en">Turn a spare Android<br>into <em>a NAS you can extend</em>.</p>
+    <div class="tags" data-lang="ja"><span>LAN の PC から</span><span>USB / SD</span><span>検索</span><span>WebDAV</span><span>拡張機能</span></div>
+    <div class="tags" data-lang="en"><span>From any PC</span><span>USB / SD</span><span>Search</span><span>WebDAV</span><span>Extensions</span></div>
+  </div>
+</body>
+</html>

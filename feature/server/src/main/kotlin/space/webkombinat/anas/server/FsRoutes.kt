@@ -50,7 +50,14 @@ fun Route.fsRoutes(
     backend: StorageBackend,
     scopeOf: suspend (ApplicationCall) -> FsScope,
     listExtra: (FsScope, SafePath) -> ExtensionInfo? = { _, _ -> null },
+    search: SearchService? = null,
 ) {
+    get("search") {
+        val scope = scopeOf(call)
+        val res = searchIn(search, call, volume = scope.volume, base = scope.base)
+        call.respond(res.copy(hits = res.hits.map { it.copy(path = scope.rel(SafePath.parse(it.path))) }))
+    }
+
     get("list") {
         val scope = scopeOf(call)
         val path = scope.abs(call.request.queryParameters["path"])
@@ -175,4 +182,19 @@ private fun InputStream.copyLimited(out: OutputStream, limit: Long) {
         out.write(buffer, 0, n)
         remaining -= n
     }
+}
+
+/** `?q=&limit=&hidden=1` で検索する（NAS 全体・ボリューム・拡張機能の data/ で共通） */
+internal suspend fun searchIn(
+    search: SearchService?,
+    call: ApplicationCall,
+    volume: String?,
+    base: SafePath = SafePath.ROOT,
+): SearchResponse {
+    if (search == null) throw ApiException("検索は使えません", HttpStatusCode.ServiceUnavailable, "search_unavailable")
+    val params = call.request.queryParameters
+    val q = params["q"].orEmpty()
+    val limit = params["limit"]?.toIntOrNull() ?: SearchService.DEFAULT_LIMIT
+    val scope = SearchScope(volume, base, includeHidden = params["hidden"] == "1", onlineVolumes = search.onlineVolumes())
+    return search.search(q, scope, limit)
 }

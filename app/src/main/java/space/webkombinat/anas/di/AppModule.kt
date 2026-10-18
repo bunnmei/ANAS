@@ -20,6 +20,10 @@ import space.webkombinat.anas.core.storage.VolumeStore
 import space.webkombinat.anas.data.DataStoreSettingsRepository
 import space.webkombinat.anas.data.SettingsRepository
 import space.webkombinat.anas.server.ExtensionRegistry
+import space.webkombinat.anas.server.IndexingStorageBackend
+import space.webkombinat.anas.server.SearchIndex
+import space.webkombinat.anas.server.SearchService
+import java.io.File
 import javax.inject.Qualifier
 import javax.inject.Singleton
 
@@ -35,6 +39,11 @@ annotation class SettingsStore
 @Qualifier
 @Retention(AnnotationRetention.BINARY)
 annotation class VolumesStore
+
+/** 検索の索引を更新しない、元のストレージ（索引の走査に使う） */
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class RawStorage
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -67,8 +76,24 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideStorageBackend(@ApplicationContext context: Context, store: VolumeStore): StorageBackend =
+    @RawStorage
+    fun provideRawStorageBackend(@ApplicationContext context: Context, store: VolumeStore): StorageBackend =
         SafStorageBackend(context, store)
+
+    @Provides
+    @Singleton
+    fun provideSearchIndex(@ApplicationContext context: Context): SearchIndex =
+        SearchIndex(File(context.noBackupFilesDir, "search.db").path)
+
+    @Provides
+    @Singleton
+    fun provideSearchService(@RawStorage raw: StorageBackend, index: SearchIndex): SearchService = SearchService(raw, index)
+
+    /** アプリ全体で使うストレージ。書き込み・名前の変更・削除をその場で検索の索引にも反映する */
+    @Provides
+    @Singleton
+    fun provideStorageBackend(@RawStorage raw: StorageBackend, index: SearchIndex): StorageBackend =
+        IndexingStorageBackend(raw, index)
 
     @Provides
     @Singleton

@@ -19,11 +19,13 @@ class ExtensionManifestTest {
     fun parsesFullManifest() {
         val text = """
             {"anas":1,"id":"kicad_symbol_footprint","name":"KiCad","version":"1.2.0","icon":"icon.svg",
-             "scope":"all","externalOrigins":["https://cdn.jsdelivr.net"],"unknownKey":true}
+             "scope":"all","externalOrigins":["https://cdn.jsdelivr.net"],
+             "network":["https://www.amazon.co.jp","https://*.media-amazon.com:8443"],"unknownKey":true}
         """
         val m = ExtensionManifest.parse(text, ".kicad_symbol_footprint").getOrThrow()
         assertEquals(ExtensionManifest.Scope.ALL, m.scope)
         assertEquals("icon.svg", m.icon)
+        assertEquals(listOf("https://www.amazon.co.jp", "https://*.media-amazon.com:8443"), m.network)
     }
 
     @Test
@@ -35,6 +37,10 @@ class ExtensionManifestTest {
             """{"anas":1,"id":"a","name":" "}""" to ".a",
             """{"anas":1,"id":"a","name":"x","icon":"../x"}""" to ".a",
             """{"anas":1,"id":"a","name":"x","externalOrigins":["http://evil"]}""" to ".a",
+            """{"anas":1,"id":"a","name":"x","network":["http://example.com"]}""" to ".a",
+            """{"anas":1,"id":"a","name":"x","network":["https://*.com"]}""" to ".a",
+            """{"anas":1,"id":"a","name":"x","network":["https://a.*.com"]}""" to ".a",
+            """{"anas":1,"id":"a","name":"x","network":["https://example.com/path"]}""" to ".a",
             """{"anas":1,"id":"a","name":"x","scope":"root"}""" to ".a",
             """not json""" to ".a",
         )

@@ -6,17 +6,22 @@ import androidx.core.content.ContextCompat
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import space.webkombinat.anas.BuildConfig
 import space.webkombinat.anas.core.model.StorageBackend
+import space.webkombinat.anas.data.AppMode
 import space.webkombinat.anas.data.SettingsRepository
 import space.webkombinat.anas.di.AppScope
 import space.webkombinat.anas.server.AnasServer
 import space.webkombinat.anas.server.ExtensionRegistry
+import space.webkombinat.anas.server.SearchService
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -40,12 +45,25 @@ class ServerController @Inject constructor(
     private val registry: ExtensionRegistry,
     private val settings: SettingsRepository,
     private val assets: AndroidAssetSource,
+    private val search: SearchService,
     @AppScope private val scope: CoroutineScope,
 ) {
     private val _state = MutableStateFlow<ServerState>(ServerState.Stopped)
     val state: StateFlow<ServerState> = _state.asStateFlow()
 
     private var server: AnasServer? = null
+
+    /** サーバーが動いているあいだの、検索の索引の定期更新 */
+    private var indexing: Job? = null
+
+    init {
+        // 「クライアントのみ」に切り替えたら、動いているサーバーを止める
+        scope.launch {
+            settings.settings.map { it.mode }.distinctUntilChanged().collect { mode ->
+                if (mode == AppMode.CLIENT && _state.value !is ServerState.Stopped) requestStop()
+            }
+        }
+    }
 
     fun requestStart() {
         _state.value = ServerState.Starting
@@ -66,13 +84,14 @@ class ServerController @Inject constructor(
         if (server != null) return _state.value
         _state.value = ServerState.Starting
         val port = settings.current().port
-        val next = AnasServer(backend, registry, assets) {
+        val next = AnasServer(backend, registry, assets, search = search) {
             settings.settings.value.toServerConfig(BuildConfig.VERSION_NAME)
         }
         val result = try {
             withContext(Dispatchers.IO) { next.start(port) }
             server = next
             scope.launch { runCatching { registry.scan() } }
+            indexing = search.startAuto(scope)
             ServerState.Running(port, NetworkAddresses.list())
         } catch (e: Exception) {
             next.stop()
@@ -86,6 +105,8 @@ class ServerController @Inject constructor(
     }
 
     internal fun stopServer() {
+        indexing?.cancel()
+        indexing = null
         server?.stop()
         server = null
         if (_state.value !is ServerState.Failed) _state.value = ServerState.Stopped

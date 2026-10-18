@@ -13,6 +13,12 @@ data class ServerConfig(
     val disabledExtensions: Set<String> = emptySet(),
     /** scope: "all" を許可した拡張機能の ID */
     val fullAccessExtensions: Set<String> = emptySet(),
+    /** 拡張機能 ID → アプリで許可した外部サイト（anas.json の `network` のうち許可したもの） */
+    val networkGrants: Map<String, Set<String>> = emptyMap(),
+    /** WebDAV（/dav/）を使えるようにする */
+    val webDavEnabled: Boolean = false,
+    /** WebDAV からは読むだけにする（[readOnly] が true なら、これに関係なく読むだけ） */
+    val webDavReadOnly: Boolean = false,
     val appVersion: String = "dev",
 ) {
     companion object {
