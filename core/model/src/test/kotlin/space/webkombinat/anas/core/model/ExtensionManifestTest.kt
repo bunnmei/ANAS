@@ -57,6 +57,16 @@ class ExtensionManifestTest {
     }
 
     @Test
+    fun opensNeedsScopeAllAndDotExtensions() {
+        val m = ExtensionManifest.parse("""{"anas":1,"id":"a","name":"x","scope":"all","opens":[".csv",".kicad_sym"]}""", ".a").getOrThrow()
+        assertEquals(listOf(".csv", ".kicad_sym"), m.opens)
+        assertTrue(ExtensionManifest.parse("""{"anas":1,"id":"a","name":"x","opens":[".csv"]}""", ".a").isFailure)
+        for (bad in listOf("csv", ".CSV", ".a/b", "*")) {
+            assertTrue(bad, ExtensionManifest.parse("""{"anas":1,"id":"a","name":"x","scope":"all","opens":["$bad"]}""", ".a").isFailure)
+        }
+    }
+
+    @Test
     fun idFromFolderName() {
         assertEquals("jisui", ExtensionManifest.idFromFolderName(".jisui"))
         assertNull(ExtensionManifest.idFromFolderName("jisui"))

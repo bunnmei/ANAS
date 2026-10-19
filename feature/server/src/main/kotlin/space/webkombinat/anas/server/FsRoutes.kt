@@ -108,7 +108,7 @@ fun Route.fsRoutes(
     // 拡張子で形式を見分ける外部のプレーヤー（VLC など）にもそのまま渡せる。Range 対応なのでシークもできる
     get("stream/{path...}") {
         val scope = scopeOf(call)
-        val path = scope.abs(call.parameters.getAll("path").orEmpty().joinToString("/"))
+        val path = scope.abs(call.pathParameters.getAll("path").orEmpty().joinToString("/"))
         call.respondFile(backend.openRead(scope.volume, path), download = false, sandbox = true)
     }
 

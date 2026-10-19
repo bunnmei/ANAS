@@ -37,6 +37,9 @@ data class InstalledExtension(
         networkAllowed = manifest?.network.orEmpty().filter { it in config.networkGrants[id].orEmpty() },
         homeCapable = manifest?.home == true,
         isHome = canBeHome(config),
+        opens = manifest?.opens.orEmpty(),
+        canOpen = usable && !manifest?.opens.isNullOrEmpty() && id !in config.disabledExtensions &&
+            manifest.scope == ExtensionManifest.Scope.ALL && id in config.fullAccessExtensions,
         error = error,
     )
 

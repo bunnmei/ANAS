@@ -24,6 +24,10 @@
  * import { nas } from "/_anas/sdk.js";
  * const [disk] = await nas.volumes();
  * const files = await nas.volume(disk.id).list("/");   // ボリュームのルートからのパス
+ *
+ * // anas.json の "opens": [".csv"] で、NAS の画面から開かれたファイル
+ * const file = openedFile();
+ * if (file) show(await file.client.readText(file.path));
  * ```
  * 型定義は /_anas/sdk.d.ts。仕様書は /_anas/spec.md。
  */
@@ -66,7 +70,21 @@ export interface ExtensionInfo {
   homeCapable: boolean;
   /** アプリで「ホーム画面にする」を選んでいて、今 `/` を開くとこの拡張機能になる */
   isHome: boolean;
+  /** anas.json の `opens`（この拡張機能で開けるファイルの拡張子。".csv" など） */
+  opens: string[];
+  /** opens のファイルを今開ける（有効・NAS 全体へのアクセスを許可済み） */
+  canOpen: boolean;
   error?: string;
+}
+
+/** NAS の画面で開かれたファイル（[openedFile] が返す） */
+export interface OpenedFile {
+  volume: string;
+  /** ボリュームのルートからのパス */
+  path: string;
+  name: string;
+  /** そのボリュームのクライアント（nas.volume(volume) と同じ）。readText・fileUrl などで中身を読む */
+  client: AnasClient;
 }
 
 /** NAS のストレージ（SD カード・USB ドライブなど） */
@@ -511,6 +529,18 @@ export const nas: NasAccess = {
     return (await (await check(await fetch("/api/v1/extensions"))).json()) as ExtensionInfo[];
   },
 };
+
+/**
+ * NAS の画面で、anas.json の `opens` に書いた拡張子のファイルを開いたときに渡されるファイル。
+ * ページの URL（`/x/<id>/?volume=disk1&path=/a/b.csv`）から読む。そうでなければ null
+ */
+export function openedFile(): OpenedFile | null {
+  const params = new URLSearchParams(location.search);
+  const volume = params.get("volume");
+  const path = params.get("path");
+  if (!volume || !path) return null;
+  return { volume, path, name: path.split("/").pop() ?? path, client: nas.volume(volume) };
+}
 
 /** 拡張機能 ID を指定してクライアントを作る */
 export function createClient(id: string): AnasClient {

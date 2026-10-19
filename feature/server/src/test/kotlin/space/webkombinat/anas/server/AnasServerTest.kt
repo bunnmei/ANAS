@@ -218,6 +218,7 @@ class AnasServerTest {
         File(disk, ".jisui/data/a.mp3").writeText("AUDIO")
         File(disk, "secret.mp3").writeText("SECRET")
         assertEquals("AUDIO", client.get("/x/jisui/api/stream/a.mp3").bodyAsText())
+        assertEquals("AUDIO", client.get("/x/jisui/api/stream/a.mp3?path=/books/a.pdf").bodyAsText())
         assertEquals(HttpStatusCode.NotFound, client.get("/x/jisui/api/stream/secret.mp3").status)
         val list = client.get("/x/jisui/api/playlist.m3u8") { header(HttpHeaders.Host, "nas:8080") }.bodyAsText()
         assertTrue(list, list.contains("http://nas:8080/x/jisui/api/stream/a.mp3") && !list.contains("books"))
@@ -290,6 +291,22 @@ class AnasServerTest {
         assertEquals(HttpStatusCode.BadRequest, postJson("/x/jisui/api/copy", """{"path":"/a.pdf","toDir":"/../.."}""").status)
         assertEquals(HttpStatusCode.BadRequest, postJson("/x/jisui/api/move", """{"path":"/a.pdf","toDir":"/","toVolume":"disk1"}""").status)
         assertTrue(File(disk, ".jisui/data/a.pdf").exists())
+    }
+
+    @Test
+    fun openerExtensionIsUsableOnlyWithFullAccess() = test {
+        File(disk, ".csv/app").mkdirs()
+        File(disk, ".csv/anas.json").writeText("""{"anas":1,"id":"csv","name":"CSV","scope":"all","opens":[".csv",".tsv"]}""")
+        File(disk, ".csv/app/index.html").writeText("<h1>csv</h1>")
+        registry.scan()
+        val before = client.get("/api/v1/extensions").bodyAsText()
+        assertTrue(before, before.contains("\"opens\":[\".csv\",\".tsv\"]") && before.contains("\"canOpen\":false"))
+        config = ServerConfig(fullAccessExtensions = setOf("csv"))
+        assertTrue(client.get("/api/v1/extensions").bodyAsText().contains("\"canOpen\":true"))
+        // ?path= を付けても、ページのパス（{path...}）と混ざらない
+        assertEquals("<h1>csv</h1>", client.get("/x/csv/?volume=disk1&path=/a/b.csv").bodyAsText())
+        config = ServerConfig(fullAccessExtensions = setOf("csv"), disabledExtensions = setOf("csv"))
+        assertTrue(client.get("/api/v1/extensions").bodyAsText().contains("\"canOpen\":false"))
     }
 
     @Test

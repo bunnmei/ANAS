@@ -75,6 +75,10 @@ data class ExtensionInfo(
     val homeCapable: Boolean = false,
     /** アプリで「ホーム画面にする」を選んでいて、今 `/` を開くとこの拡張機能になる */
     val isHome: Boolean = false,
+    /** anas.json の `opens`（この拡張機能で開けるファイルの拡張子） */
+    val opens: List<String> = emptyList(),
+    /** [opens] のファイルを今開ける（有効・NAS 全体へのアクセスを許可済み）。NAS の画面はこれが true のものだけ使う */
+    val canOpen: Boolean = false,
     /** anas.json の誤りなど。null なら正常 */
     val error: String? = null,
 )

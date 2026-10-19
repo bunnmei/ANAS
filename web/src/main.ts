@@ -166,12 +166,25 @@ function trackLists(items: { client: AnasClient; entry: Entry }[]): Lists {
   return lists;
 }
 
+/** [entry] を開ける拡張機能（anas.json の opens。使えるものだけ） */
+function opener(entry: Entry): ExtensionInfo | undefined {
+  if (entry.isDir) return undefined;
+  const name = entry.name.toLowerCase();
+  return state.extensions.find((x) => x.canOpen && x.opens.some((ext) => name.endsWith(ext)));
+}
+
 /**
  * ファイル名のリンク。音声・動画はページの中のプレーヤー、画像・テキスト・PDF はビューアで開く。
  * それ以外は新しいタブで開く（Ctrl などを押しながらなら、どれも新しいタブ）
  */
-function fileLink(c: AnasClient, entry: Entry, lists: Lists): HTMLAnchorElement {
+function fileLink(c: AnasClient, volume: string, entry: Entry, lists: Lists): HTMLAnchorElement {
   const label = [icon(iconFor(entry)), h("span", {}, entry.name)];
+  // 拡張機能（anas.json の opens）で開けるファイルは、その拡張機能の画面で開く
+  const ext = opener(entry);
+  if (ext) {
+    const href = `${ext.url}?${new URLSearchParams({ volume, path: entry.path })}`;
+    return h("a", { href, class: "files__name", title: `「${ext.name}」で開く` }, ...label, h("span", { class: "files__via" }, ext.name));
+  }
   const media = mediaKind(entry);
   if (media) {
     const list = lists[media];
@@ -563,7 +576,7 @@ function fileRow(
   const isExtFolder = e.isDir && state.extensions.some((x) => x.volume === volume && x.folder === e.path);
   const link = e.isDir
     ? h("a", { href: filesHash(volume, e.path), class: "files__name" }, icon(isExtFolder ? "extension" : "folder"), h("span", {}, e.name))
-    : fileLink(c, e, lists);
+    : fileLink(c, volume, e, lists);
 
   const actions = h(
     "td",
@@ -675,7 +688,7 @@ function searchRow(hit: SearchHit, entry: Entry, showAdded: boolean, lists: List
   const parent = hit.path.split("/").slice(0, -1).join("/") || "/";
   const link = hit.isDir
     ? h("a", { href: filesHash(hit.volume, hit.path), class: "files__name" }, icon("folder"), h("span", {}, hit.name))
-    : fileLink(c, entry, lists);
+    : fileLink(c, hit.volume, entry, lists);
   const where = h("div", { class: "where" }, h("a", { href: filesHash(hit.volume, parent) }, `${volumeName(hit.volume)}:${parent}`));
   const date = showAdded ? (hit.added ?? 0) : hit.modified;
   return h(
@@ -947,6 +960,8 @@ async function showExtensions(): Promise<void> {
       x.error && h("p", { class: "error" }, x.error),
       !x.error && !x.enabled && h("p", { class: "muted" }, "無効（アプリの「拡張」タブで有効にできます）"),
       !x.error && x.scope === "all" && h("p", { class: "muted small" }, x.fullAccess ? "NAS 全体へのアクセス: 許可" : "NAS 全体へのアクセス: 未許可（アプリで許可できます）"),
+      !x.error && x.opens.length > 0 &&
+        h("p", { class: "muted small" }, `開けるファイル: ${x.opens.join(" ")}${x.canOpen ? "" : "（NAS 全体へのアクセスを許可すると使えます）"}`),
       !x.error && x.network.length > 0 &&
         h(
           "p",

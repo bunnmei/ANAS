@@ -94,6 +94,7 @@ select { min-height: 36px; padding: 4px 8px; border-radius: 8px; border: 1px sol
 .files .date { white-space: nowrap; color: var(--anas-muted); }
 .files__name { display: flex; align-items: center; gap: 10px; padding: 6px 0; color: var(--anas-text); text-decoration: none; word-break: break-all; }
 .files__name .icon { color: var(--anas-accent); }
+.files__via { flex: none; margin-left: auto; padding: 0 8px; border-radius: 999px; font-size: 0.75rem; color: var(--anas-muted); background: var(--anas-surface-2); }
 .files__actions { text-align: right; white-space: nowrap; width: 1%; }
 
 @media (max-width: 640px) {

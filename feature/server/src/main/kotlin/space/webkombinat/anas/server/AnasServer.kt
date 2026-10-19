@@ -353,7 +353,7 @@ private fun Route.extensionRoutes(
 
     get("{path...}") {
         val ext = usable(call)
-        val segments = call.parameters.getAll("path").orEmpty().filter { it.isNotEmpty() }
+        val segments = call.pathParameters.getAll("path").orEmpty().filter { it.isNotEmpty() }
         if (segments.isEmpty() && !call.request.path().endsWith("/")) {
             // index.html の相対パスが正しく解決されるよう、末尾に / を付ける
             call.respondRedirect("/x/${ext.id}/")
@@ -406,7 +406,7 @@ private fun Route.staticRoutes(assets: AssetSource, homeUrl: (ApplicationCall) -
         call.respondAsset(assets, file)
     }
     get("/{path...}") {
-        val path = call.parameters.getAll("path").orEmpty().joinToString("/")
+        val path = call.pathParameters.getAll("path").orEmpty().joinToString("/")
         call.respondAsset(assets, path)
     }
 }

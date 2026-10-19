@@ -39,6 +39,11 @@ data class ExtensionManifest(
      * アプリで「ホーム画面にする」を選んだときだけ、`/` を開くとこの拡張機能の画面になる
      */
     val home: Boolean = false,
+    /**
+     * この拡張機能で開けるファイルの拡張子（例: `".csv"`, `".kicad_sym"`）。`scope: "all"` が必要。
+     * NAS の画面で該当するファイルを開くと `/x/<id>/?volume=<ボリューム>&path=<パス>` が開く
+     */
+    val opens: List<String> = emptyList(),
 ) {
     @Serializable
     enum class Scope {
@@ -61,6 +66,7 @@ data class ExtensionManifest(
         // `*.` は「そのドメインのサブドメインすべて」。`*.com` のような広すぎるものは書けない
         private val NETWORK_PATTERN =
             Regex("^https://(\\*\\.[A-Za-z0-9-]+(\\.[A-Za-z0-9-]+)+|[A-Za-z0-9-]+(\\.[A-Za-z0-9-]+)*)(:[0-9]{1,5})?$")
+        private val EXTENSION_PATTERN = Regex("^\\.[a-z0-9][a-z0-9_+-]{0,31}$")
         private val json = Json { ignoreUnknownKeys = true }
 
         /** フォルダ名（`.jisui`）から ID（`jisui`）を取り出す。拡張機能のフォルダ名でなければ null */
@@ -89,6 +95,10 @@ data class ExtensionManifest(
             require(ORIGIN_PATTERN.matches(origin)) { "\"externalOrigins\" は https://host[:port] の形で書いてください: $origin" }
         }
         require(!home || scope == Scope.ALL) { "\"home\": true にするには \"scope\": \"all\" も必要です（NAS 全体のファイルを扱うため）" }
+        require(opens.isEmpty() || scope == Scope.ALL) { "\"opens\" を使うには \"scope\": \"all\" も必要です（NAS のファイルを読むため）" }
+        for (ext in opens) {
+            require(EXTENSION_PATTERN.matches(ext)) { "\"opens\" は \".csv\" のように . で始まる英小文字の拡張子で書いてください: $ext" }
+        }
         for (origin in network) {
             require(NETWORK_PATTERN.matches(origin)) { "\"network\" は https://host[:port] か https://*.host の形で書いてください: $origin" }
         }
