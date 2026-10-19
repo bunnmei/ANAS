@@ -1,6 +1,7 @@
 // NAS の Web UI。画面は「ファイル」（#/files/<volume>/<path>）・「検索」（#/search?q=）・「拡張機能」（#/extensions）
 import { $, h, icon, render, type IconName } from "./dom.js";
 import { mediaKind, play, playOnClick, type MediaKind, type Track } from "./player.js";
+import { viewKind, viewOnClick, type ViewKind } from "./viewer.js";
 import {
   AnasError,
   createClientForBase,
@@ -107,28 +108,41 @@ function iconFor(entry: Entry): IconName {
   if (entry.mime.startsWith("image/")) return "image";
   if (entry.mime.startsWith("video/")) return "video";
   if (entry.mime.startsWith("audio/")) return "audio";
+  if (viewKind(entry) === "text") return "text";
   if (entry.mime === "application/pdf") return "pdf";
   return "file";
 }
 
-/** 一覧の中の音声・動画を、種類ごとの再生リストにする（クリックしたものから順に再生する） */
-function trackLists(items: { client: AnasClient; entry: Entry }[]): Record<MediaKind, Track[]> {
-  const lists: Record<MediaKind, Track[]> = { audio: [], video: [] };
+type Lists = Record<MediaKind | ViewKind, Track[]>;
+
+/** 一覧の中の音声・動画・画像などを種類ごとに並べる（開いたものから前後へ進めるように） */
+function trackLists(items: { client: AnasClient; entry: Entry }[]): Lists {
+  const lists: Lists = { audio: [], video: [], image: [], text: [], pdf: [] };
   for (const t of items) {
-    const kind = mediaKind(t.entry);
+    const kind = mediaKind(t.entry) ?? viewKind(t.entry);
     if (kind) lists[kind].push(t);
   }
   return lists;
 }
 
-/** ファイル名のリンク。音声・動画はページの中のプレーヤーで開き、それ以外は新しいタブで開く */
-function fileLink(c: AnasClient, entry: Entry, lists: Record<MediaKind, Track[]>): HTMLAnchorElement {
+/**
+ * ファイル名のリンク。音声・動画はページの中のプレーヤー、画像・テキスト・PDF はビューアで開く。
+ * それ以外は新しいタブで開く（Ctrl などを押しながらなら、どれも新しいタブ）
+ */
+function fileLink(c: AnasClient, entry: Entry, lists: Lists): HTMLAnchorElement {
   const label = [icon(iconFor(entry)), h("span", {}, entry.name)];
-  const kind = mediaKind(entry);
-  if (!kind) return h("a", { href: c.fileUrl(entry.path), target: "_blank", rel: "noopener", class: "files__name" }, ...label);
+  const media = mediaKind(entry);
+  if (media) {
+    const list = lists[media];
+    const at = list.findIndex((t) => t.entry === entry);
+    return h("a", { href: c.streamUrl(entry.path), class: "files__name", onclick: playOnClick(list, at) }, ...label);
+  }
+  const kind = viewKind(entry);
+  const attrs = { href: c.fileUrl(entry.path), target: "_blank", rel: "noopener", class: "files__name" };
+  if (!kind) return h("a", attrs, ...label);
   const list = lists[kind];
   const at = list.findIndex((t) => t.entry === entry);
-  return h("a", { href: c.streamUrl(entry.path), class: "files__name", onclick: playOnClick(list, at) }, ...label);
+  return h("a", { ...attrs, onclick: viewOnClick(list, at) }, ...label);
 }
 
 function writable(volume: string): boolean {
@@ -344,7 +358,7 @@ function fileRow(
   e: Entry,
   canWrite: boolean,
   reload: () => void,
-  lists: Record<MediaKind, Track[]>,
+  lists: Lists,
 ): HTMLTableRowElement {
   const c = client(volume);
   const isExtFolder = e.isDir && state.extensions.some((x) => x.volume === volume && x.folder === e.path);
@@ -456,7 +470,7 @@ function hitEntry(hit: SearchHit): Entry {
   return { name: hit.name, path: hit.path, isDir: hit.isDir, size: hit.size, modified: hit.modified, mime: hit.mime };
 }
 
-function searchRow(hit: SearchHit, entry: Entry, showAdded: boolean, lists: Record<MediaKind, Track[]>): HTMLTableRowElement {
+function searchRow(hit: SearchHit, entry: Entry, showAdded: boolean, lists: Lists): HTMLTableRowElement {
   const c = client(hit.volume);
   const parent = hit.path.split("/").slice(0, -1).join("/") || "/";
   const link = hit.isDir

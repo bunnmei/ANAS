@@ -8,6 +8,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "devDependencies": {
+    "pdfjs-dist": "6.4.299",
     "typescript": "7.0.2"
   }
 }

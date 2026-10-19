@@ -179,7 +179,9 @@ class AnasServerTest {
         assertEquals(HttpStatusCode.PartialContent, part.status)
         assertEquals("234", part.bodyAsText())
         assertEquals(null, part.headers["Content-Security-Policy"])
-        // 音声・動画以外は今まで通り sandbox
+        File(disk, "a.pdf").writeText("%PDF")
+        assertEquals(null, client.get("/api/v1/fs/disk1/file?path=/a.pdf").headers["Content-Security-Policy"])
+        // 音声・動画・PDF 以外は今まで通り sandbox
         assertEquals("sandbox", client.get("/api/v1/fs/disk1/stream/音楽/アルバム %231/note.txt").headers["Content-Security-Policy"])
         assertEquals(HttpStatusCode.BadRequest, client.get("/api/v1/fs/disk1/stream/%2E%2E/etc/passwd").status)
     }

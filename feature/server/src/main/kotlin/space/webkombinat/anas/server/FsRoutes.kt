@@ -194,9 +194,12 @@ suspend fun ApplicationCall.respondFile(handle: ReadHandle, download: Boolean, s
     val type = ContentType.parse(entry.mime)
     response.header(HttpHeaders.AcceptRanges, "bytes")
     response.header(HttpHeaders.CacheControl, "no-cache")
-    // 音声・動画はスクリプトが動かないので sandbox は要らない。付けるとページの origin が null になり、
-    // ブラウザ内蔵のプレーヤーが Range で読み直すときに CORS で止められて再生できない
-    if (sandbox && !isMedia(entry.mime)) response.header("Content-Security-Policy", "sandbox")
+    // 音声・動画・PDF はページのスクリプトが動かないので sandbox は要らない。付けると、
+    // 音声・動画はページの origin が null になり、内蔵のプレーヤーが Range で読み直すときに CORS で止められる。
+    // PDF はプラグイン扱いの内蔵ビューアが sandbox で止められる（PDF の中のスクリプトはビューアの中だけで動く）
+    if (sandbox && !isMedia(entry.mime) && entry.mime != "application/pdf") {
+        response.header("Content-Security-Policy", "sandbox")
+    }
     val disposition = if (download) ContentDisposition.Attachment else ContentDisposition.Inline
     response.header(
         HttpHeaders.ContentDisposition,
