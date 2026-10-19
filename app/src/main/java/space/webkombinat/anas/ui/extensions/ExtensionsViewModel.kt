@@ -40,6 +40,10 @@ class ExtensionsViewModel @Inject constructor(
             list.map { it.toInfo(config) }
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    /** ホーム画面に選んでいる拡張機能の ID */
+    val homeId: StateFlow<String?> = settings.settings.map { it.homeExtension }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
     /** 拡張機能を開くときのサーバーの URL（停止中は null） */
     val baseUrl: StateFlow<String?> = controller.state
         .map { (it as? ServerState.Running)?.urls?.firstOrNull() }
@@ -74,6 +78,13 @@ class ExtensionsViewModel @Inject constructor(
     fun setFullAccess(id: String, allowed: Boolean) = viewModelScope.launch {
         settings.update { s ->
             s.copy(fullAccessExtensions = if (allowed) s.fullAccessExtensions + id else s.fullAccessExtensions - id)
+        }
+    }
+
+    /** [id] をホーム画面にする（ほかに選んでいたものは外れる）。[on] が false なら標準の画面に戻す */
+    fun setHome(id: String, on: Boolean) = viewModelScope.launch {
+        settings.update { s ->
+            s.copy(homeExtension = if (on) id else s.homeExtension.takeIf { it != id })
         }
     }
 

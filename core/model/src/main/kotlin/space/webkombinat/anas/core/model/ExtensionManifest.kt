@@ -34,6 +34,11 @@ data class ExtensionManifest(
      * アプリで許可したものだけ有効。既定はなし
      */
     val network: List<String> = emptyList(),
+    /**
+     * NAS の最初の画面（`/`）の代わりに使える拡張機能なら true。`scope: "all"` が必要。
+     * アプリで「ホーム画面にする」を選んだときだけ、`/` を開くとこの拡張機能の画面になる
+     */
+    val home: Boolean = false,
 ) {
     @Serializable
     enum class Scope {
@@ -83,6 +88,7 @@ data class ExtensionManifest(
         for (origin in externalOrigins) {
             require(ORIGIN_PATTERN.matches(origin)) { "\"externalOrigins\" は https://host[:port] の形で書いてください: $origin" }
         }
+        require(!home || scope == Scope.ALL) { "\"home\": true にするには \"scope\": \"all\" も必要です（NAS 全体のファイルを扱うため）" }
         for (origin in network) {
             require(NETWORK_PATTERN.matches(origin)) { "\"network\" は https://host[:port] か https://*.host の形で書いてください: $origin" }
         }

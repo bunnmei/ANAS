@@ -67,6 +67,10 @@ data class ExtensionInfo(
     val network: List<String> = emptyList(),
     /** [network] のうち、アプリで許可しているもの。これだけに /x/<id>/api/fetch でアクセスできる */
     val networkAllowed: List<String> = emptyList(),
+    /** anas.json に `"home": true`（NAS の最初の画面の代わりに使える） */
+    val homeCapable: Boolean = false,
+    /** アプリで「ホーム画面にする」を選んでいて、今 `/` を開くとこの拡張機能になる */
+    val isHome: Boolean = false,
     /** anas.json の誤りなど。null なら正常 */
     val error: String? = null,
 )

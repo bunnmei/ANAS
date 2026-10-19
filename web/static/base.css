@@ -1,6 +1,6 @@
 /*
  * ANAS の共通スタイル。拡張機能からも <link rel="stylesheet" href="/_anas/base.css"> で使える。
- * - 色は CSS 変数（--anas-*）。ライト/ダークは OS の設定で自動切替
+ * - 色は CSS 変数（--anas-*）。ライト/ダークは OS の設定（アプリ内ではアプリのテーマ）で自動切替
  * - 部品のクラスは anas- で始まる（拡張機能の CSS とぶつからないように）
  */
 :root {
@@ -21,8 +21,10 @@
   --anas-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
 }
 
+/* アプリの WebView は <html data-anas-theme="dark|light"> でアプリのテーマを伝える（Android 9 は
+   prefers-color-scheme がアプリの設定に従わないため）。付いていなければ OS の設定に従う */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-anas-theme="light"]) {
     --anas-bg: #0f1415;
     --anas-surface: #182022;
     --anas-surface-2: #212b2d;
@@ -35,6 +37,20 @@
     --anas-danger: #ffb4ab;
     --anas-shadow: 0 1px 3px rgb(0 0 0 / 0.4);
   }
+}
+
+:root[data-anas-theme="dark"] {
+  --anas-bg: #0f1415;
+  --anas-surface: #182022;
+  --anas-surface-2: #212b2d;
+  --anas-text: #dee4e4;
+  --anas-muted: #9aa6a8;
+  --anas-border: #313d3f;
+  --anas-accent: #4cd9e0;
+  --anas-accent-text: #00373a;
+  --anas-accent-soft: #1f4d50;
+  --anas-danger: #ffb4ab;
+  --anas-shadow: 0 1px 3px rgb(0 0 0 / 0.4);
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -111,4 +127,19 @@ progress { accent-color: var(--anas-accent); }
 .anas-badge {
   display: inline-block; padding: 0 8px; border-radius: 999px;
   background: var(--anas-surface-2); color: var(--anas-muted); font-size: 0.8rem;
+}
+
+/* スマホ: 文字・余白・ボタンを一回り小さくして、1 画面に入る量を増やす（押せる大きさは 32px 以上を保つ） */
+@media (max-width: 600px) {
+  body { font-size: 15px; line-height: 1.55; }
+  .anas-container { padding: 12px; }
+  .anas-header { gap: 8px; padding: 6px 10px; }
+  .anas-header h1 { font-size: 1rem; }
+  .anas-btn { min-height: 32px; padding: 4px 12px; gap: 4px; }
+  .anas-btn--icon { min-width: 32px; padding: 4px; }
+  .anas-input, .anas-container input[type="text"], .anas-container input[type="search"], .anas-container select {
+    min-height: 32px; padding: 4px 10px;
+  }
+  .anas-card { padding: 12px; }
+  .anas-empty { padding: 32px 12px; }
 }

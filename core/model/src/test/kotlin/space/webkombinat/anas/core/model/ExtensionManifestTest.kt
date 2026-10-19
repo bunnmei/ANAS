@@ -42,11 +42,18 @@ class ExtensionManifestTest {
             """{"anas":1,"id":"a","name":"x","network":["https://a.*.com"]}""" to ".a",
             """{"anas":1,"id":"a","name":"x","network":["https://example.com/path"]}""" to ".a",
             """{"anas":1,"id":"a","name":"x","scope":"root"}""" to ".a",
+            """{"anas":1,"id":"a","name":"x","home":true}""" to ".a",
             """not json""" to ".a",
         )
         for ((text, folder) in cases) {
             assertTrue("should reject: $text", ExtensionManifest.parse(text, folder).isFailure)
         }
+    }
+
+    @Test
+    fun homeNeedsScopeAll() {
+        val m = ExtensionManifest.parse("""{"anas":1,"id":"a","name":"x","scope":"all","home":true}""", ".a").getOrThrow()
+        assertTrue(m.home)
     }
 
     @Test

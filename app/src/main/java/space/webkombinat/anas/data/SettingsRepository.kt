@@ -44,6 +44,8 @@ data class AppSettings(
     val networkGrants: Map<String, Set<String>> = emptyMap(),
     val webDavEnabled: Boolean = false,
     val webDavReadOnly: Boolean = false,
+    /** `/` を開いたときに出す拡張機能（anas.json に `"home": true`）。null なら標準の画面 */
+    val homeExtension: String? = null,
 ) {
     fun toServerConfig(appVersion: String) = ServerConfig(
         port = port,
@@ -54,6 +56,7 @@ data class AppSettings(
         networkGrants = networkGrants,
         webDavEnabled = webDavEnabled,
         webDavReadOnly = webDavReadOnly,
+        homeExtension = homeExtension,
         appVersion = appVersion,
     )
 }
@@ -83,6 +86,7 @@ class DataStoreSettingsRepository @Inject constructor(
         val NETWORK = stringSetPreferencesKey("network_grants")
         val WEBDAV = booleanPreferencesKey("webdav_enabled")
         val WEBDAV_READ_ONLY = booleanPreferencesKey("webdav_read_only")
+        val HOME = stringPreferencesKey("home_extension")
     }
 
     private val flow = dataStore.data
@@ -106,6 +110,7 @@ class DataStoreSettingsRepository @Inject constructor(
             prefs[Keys.FULL_ACCESS] = next.fullAccessExtensions
             prefs[Keys.WEBDAV] = next.webDavEnabled
             prefs[Keys.WEBDAV_READ_ONLY] = next.webDavReadOnly
+            next.homeExtension?.let { prefs[Keys.HOME] = it } ?: prefs.remove(Keys.HOME)
             prefs[Keys.NETWORK] = next.networkGrants.flatMap { (id, origins) -> origins.map { "$id $it" } }.toSet()
         }
     }
@@ -126,5 +131,6 @@ class DataStoreSettingsRepository @Inject constructor(
             .mapValues { it.value.toSet() },
         webDavEnabled = this[Keys.WEBDAV] ?: false,
         webDavReadOnly = this[Keys.WEBDAV_READ_ONLY] ?: false,
+        homeExtension = this[Keys.HOME],
     )
 }

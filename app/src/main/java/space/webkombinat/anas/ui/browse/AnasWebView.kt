@@ -14,7 +14,9 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.util.Base64
+import android.content.ContextWrapper
 import android.view.ContextThemeWrapper
+import android.view.View
 import android.view.ViewGroup
 import android.webkit.CookieManager
 import android.webkit.JavascriptInterface
@@ -43,6 +45,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
+import androidx.webkit.WebViewCompat
+import androidx.webkit.WebViewFeature
 import space.webkombinat.anas.BuildConfig
 import space.webkombinat.anas.client.LanUrls
 import java.io.ByteArrayInputStream
@@ -71,6 +78,18 @@ private const val MAX_BLOB_BYTES = 50 * 1024 * 1024
  * `<a download href="blob:...">` は WebView の DownloadListener に名前が届かず、
  * ダウンロードマネージャーでも取れないので、ページの中で読んでアプリに渡す
  */
+/** アプリのテーマをページに伝える。color-scheme も合わせて、フォームの部品やスクロールバーの色も揃える */
+private fun themeJs(dark: Boolean): String {
+    val theme = if (dark) "dark" else "light"
+    return "document.documentElement.dataset.anasTheme='$theme';document.documentElement.style.colorScheme='$theme';"
+}
+
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
+}
+
 private const val BLOB_DOWNLOAD_JS = """
 (() => {
   if (window.__anasDownload) return;
@@ -204,6 +223,30 @@ fun AnasWebView(
 
     BackHandler(enabled = state.canGoBack) { state.view?.goBack() }
 
+    // ---- 動画の全画面（WebView は自分では全画面にならないので、渡された View を画面の一番上に重ねる） ----
+    var exitFullscreen by remember { mutableStateOf<(() -> Unit)?>(null) }
+    val showFullscreen by rememberUpdatedState { view: View, callback: WebChromeClient.CustomViewCallback ->
+        val activity = context.findActivity()
+        if (activity == null) {
+            callback.onCustomViewHidden()
+        } else {
+            exitFullscreen?.invoke()
+            val decor = activity.window.decorView as ViewGroup
+            decor.addView(view, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+            val bars = WindowCompat.getInsetsController(activity.window, decor)
+            bars.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            bars.hide(WindowInsetsCompat.Type.systemBars())
+            exitFullscreen = {
+                exitFullscreen = null
+                decor.removeView(view)
+                bars.show(WindowInsetsCompat.Type.systemBars())
+                callback.onCustomViewHidden()
+            }
+        }
+    }
+    // 全画面のときの「戻る」は全画面をやめるだけにする（後に登録したほうが優先される）
+    BackHandler(enabled = exitFullscreen != null) { exitFullscreen?.invoke() }
+
     DisposableEffect(state) {
         onDispose {
             CookieManager.getInstance().flush()
@@ -213,13 +256,15 @@ fun AnasWebView(
                 view.destroy()
             }
             state.view = null
+            exitFullscreen?.invoke()
         }
     }
 
     AndroidView(
         modifier = modifier,
         factory = { ctx ->
-            // ページの prefers-color-scheme をアプリのテーマ（ライト / ダーク）に合わせる
+            // ページの prefers-color-scheme をアプリのテーマ（ライト / ダーク）に合わせる。
+            // Android 9 はこの仕組み（isLightTheme）がないので、下の themeJs でも伝える
             val themed = ContextThemeWrapper(
                 ctx,
                 if (dark) android.R.style.Theme_Material_NoActionBar else android.R.style.Theme_Material_Light_NoActionBar,
@@ -239,6 +284,11 @@ fun AnasWebView(
                 settings.setSupportMultipleWindows(false)
                 CookieManager.getInstance().setAcceptCookie(true)
 
+                // ページの JS より先に <html data-anas-theme="dark|light"> を付ける（base.css が見る）
+                val themeJs = themeJs(dark)
+                val atDocumentStart = WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)
+                if (atDocumentStart) WebViewCompat.addDocumentStartJavaScript(this, themeJs, setOf("*"))
+
                 addJavascriptInterface(
                     object {
                         @JavascriptInterface
@@ -254,6 +304,15 @@ fun AnasWebView(
                 webViewClient = object : WebViewClient() {
                     override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                         val target = request.url.toString()
+                        // フォルダの再生リスト（M3U8）は WebView では再生できないので、VLC などのプレーヤーに渡す
+                        if (LanUrls.isLan(target) && request.url.path.orEmpty().endsWith("/playlist.m3u8")) {
+                            try {
+                                view.context.startActivity(Intent(Intent.ACTION_VIEW).setDataAndType(request.url, "audio/x-mpegurl"))
+                            } catch (_: ActivityNotFoundException) {
+                                message("再生リストを開けるアプリがありません（VLC などのプレーヤーを入れてください）")
+                            }
+                            return true
+                        }
                         if (LanUrls.isLan(target)) return false
                         // LAN の外（https://… や mailto: など）は WebView では開かない
                         if (request.isForMainFrame || request.hasGesture()) {
@@ -281,6 +340,7 @@ fun AnasWebView(
 
                     override fun onPageStarted(view: WebView, url: String?, favicon: Bitmap?) {
                         state.error = null
+                        if (!atDocumentStart) view.evaluateJavascript(themeJs, null)
                     }
 
                     override fun onPageFinished(view: WebView, url: String?) {
@@ -297,6 +357,12 @@ fun AnasWebView(
                 }
 
                 webChromeClient = object : WebChromeClient() {
+                    override fun onShowCustomView(view: View, callback: CustomViewCallback) = showFullscreen(view, callback)
+
+                    override fun onHideCustomView() {
+                        exitFullscreen?.invoke()
+                    }
+
                     override fun onProgressChanged(view: WebView, newProgress: Int) {
                         state.progress = newProgress
                     }

@@ -19,6 +19,8 @@ data class ServerConfig(
     val webDavEnabled: Boolean = false,
     /** WebDAV からは読むだけにする（[readOnly] が true なら、これに関係なく読むだけ） */
     val webDavReadOnly: Boolean = false,
+    /** `/` を開いたときに表示する拡張機能（anas.json に `"home": true`）の ID。null なら標準の画面 */
+    val homeExtension: String? = null,
     val appVersion: String = "dev",
 ) {
     companion object {

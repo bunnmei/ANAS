@@ -35,8 +35,15 @@ data class InstalledExtension(
         fullAccess = manifest?.scope == ExtensionManifest.Scope.ALL && id in config.fullAccessExtensions,
         network = manifest?.network.orEmpty(),
         networkAllowed = manifest?.network.orEmpty().filter { it in config.networkGrants[id].orEmpty() },
+        homeCapable = manifest?.home == true,
+        isHome = canBeHome(config),
         error = error,
     )
+
+    /** ホーム画面に選ばれていて、そのまま使える（有効・NAS 全体へのアクセスを許可済み） */
+    fun canBeHome(config: ServerConfig): Boolean =
+        usable && manifest?.home == true && config.homeExtension == id && id !in config.disabledExtensions &&
+            manifest.scope == ExtensionManifest.Scope.ALL && id in config.fullAccessExtensions
 }
 
 /**

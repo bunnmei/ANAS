@@ -49,7 +49,7 @@
 
     <h2>2. anas.json</h2>
 <pre><code>{ "anas": 1, "id": "jisui", "name": "Scanned books", "version": "1.0.0", "icon": "icon.svg" }</code></pre>
-    <p><code>id</code> uses lowercase letters, digits, <code>_</code> and <code>-</code>, and the folder name must be <code>.</code> + id. <code>scope: "all"</code> asks for access to the whole NAS, which the user must allow in the app. <code>externalOrigins</code> lists CDNs you load from; by default nothing external is allowed. <code>network</code> lists sites that ANAS (the device) fetches on the extension's behalf, e.g. <code>["https://www.amazon.co.jp", "https://*.media-amazon.com"]</code>; the user must allow it in the app.</p>
+    <p><code>id</code> uses lowercase letters, digits, <code>_</code> and <code>-</code>, and the folder name must be <code>.</code> + id. <code>scope: "all"</code> asks for access to the whole NAS, which the user must allow in the app. <code>externalOrigins</code> lists CDNs you load from; by default nothing external is allowed. <code>network</code> lists sites that ANAS (the device) fetches on the extension's behalf, e.g. <code>["https://www.amazon.co.jp", "https://*.media-amazon.com"]</code>; the user must allow it in the app. <code>home: true</code> (with <code>scope: "all"</code>) lets the extension replace the NAS start page.</p>
 
     <h2>3. SDK</h2>
 <pre><code>&lt;script type="module"&gt;
@@ -58,7 +58,8 @@
   img.src = anas.fileUrl("/covers/a.jpg");
   await anas.upload(joinPath("/books", file.name), file, { onProgress: (d, t) =&gt; console.log(d / t) });
 &lt;/script&gt;</code></pre>
-    <p>Also: <code>zipUrl</code> (download a folder as zip), <code>stat</code>, <code>exists</code>, <code>readText</code>, <code>readJson</code>, <code>writeJson</code>, <code>listRecursive</code>, <code>mkdir</code>, <code>rename</code>, <code>remove</code>. Include <code>/_anas/base.css</code> for the ANAS look with automatic light / dark.</p>
+    <p>Also: <code>zipUrl</code> (download a folder as zip), <code>streamUrl</code> (for audio / video: seekable, also works in VLC etc.), <code>playlistUrl</code> (M3U8 playlist of a folder), <code>stat</code>, <code>exists</code>, <code>readText</code>, <code>readJson</code>, <code>writeJson</code>, <code>listRecursive</code>, <code>mkdir</code>, <code>rename</code>, <code>remove</code>. Include <code>/_anas/base.css</code> for the ANAS look with automatic light / dark.</p>
+    <p>Inside the ANAS app, the app theme is set as <code>&lt;html data-anas-theme="dark"&gt;</code> (or <code>"light"</code>), because on Android 9 <code>prefers-color-scheme</code> does not follow the app setting. If you write your own dark colors instead of using base.css, also match <code>:root[data-anas-theme="dark"]</code>.</p>
 
     <p><code>anas.search("PDF uploaded within 3 days")</code> searches the files in your own <code>data/</code> with a plain sentence (by name, type, date and size).</p>
 
@@ -71,6 +72,13 @@ const title = doc.querySelector("#productTitle")?.textContent?.trim();
 // Save images straight into data/ without going through the browser
 await anas.fetchToFile(imageUrl, "/.covers/4000000000.jpg", { overwrite: true });</code></pre>
     <p>Only allowed sites work, and redirect targets must be listed in <code>network</code> too. Devices on the LAN and the phone itself are never reachable this way. It also works inside the app's WebView.</p>
+
+    <h3 id="home">Replacing the NAS start page</h3>
+    <p>Put <code>"scope": "all"</code> and <code>"home": true</code> in <code>anas.json</code>, then turn on "Allow access to the whole NAS" and "Use as home screen" in the app's Extensions tab. Opening the NAS URL now shows your extension. Use the SDK's <code>nas</code> to work with files across the NAS.</p>
+<pre><code>import { nas } from "/_anas/sdk.js";
+const [disk] = await nas.volumes();
+const entries = await nas.volume(disk.id).list("/");   // paths from the storage root</code></pre>
+    <p>The standard page is always available by adding <code>?ui=default</code> to the URL (e.g. <code>http://192.168.1.10:8080/?ui=default</code>). Disabling or removing the extension switches back to the standard page automatically.</p>
 
     <h2>4. Installing</h2>
     <ol class="steps">
@@ -91,7 +99,11 @@ await anas.fetchToFile(imageUrl, "/.covers/4000000000.jpg", { overwrite: true })
       </div>
       <div class="card">
         <h3>Notes (.notes)</h3>
-        <p>Read Markdown (.md) notes as a rendered preview and edit them in the browser, with a side-by-side preview, pasted images saved next to the note and clickable checklists.</p>
+        <p>Read Markdown (.md) notes as a rendered preview and edit them in the browser, with a side-by-side preview, <code>/</code> commands for Markdown syntax, pasted images saved next to the note and clickable checklists.</p>
+      </div>
+      <div class="card">
+        <h3>Simple home (.home_simple)</h3>
+        <p>An example that replaces the NAS start page: storage and file lists, uploads and links to your extensions.</p>
       </div>
     </div>
   </main>

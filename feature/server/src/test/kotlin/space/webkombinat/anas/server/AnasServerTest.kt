@@ -165,6 +165,80 @@ class AnasServerTest {
     }
 
     @Test
+    fun streamsMediaByPathWithoutSandbox() = test {
+        File(disk, "音楽/アルバム #1").mkdirs()
+        File(disk, "音楽/アルバム #1/01 曲.mp3").writeText("0123456789")
+        File(disk, "音楽/アルバム #1/note.txt").writeText("x")
+
+        val full = client.get("/api/v1/fs/disk1/stream/%E9%9F%B3%E6%A5%BD/%E3%82%A2%E3%83%AB%E3%83%90%E3%83%A0%20%231/01%20%E6%9B%B2.mp3")
+        assertEquals(HttpStatusCode.OK, full.status)
+        assertEquals("audio/mpeg", full.headers[HttpHeaders.ContentType])
+        // 音声・動画に sandbox を付けると、ブラウザ内蔵のプレーヤーが Range で読み直せない
+        assertEquals(null, full.headers["Content-Security-Policy"])
+        val part = client.get("/api/v1/fs/disk1/file?path=/音楽/アルバム %231/01 曲.mp3") { header(HttpHeaders.Range, "bytes=2-4") }
+        assertEquals(HttpStatusCode.PartialContent, part.status)
+        assertEquals("234", part.bodyAsText())
+        assertEquals(null, part.headers["Content-Security-Policy"])
+        // 音声・動画以外は今まで通り sandbox
+        assertEquals("sandbox", client.get("/api/v1/fs/disk1/stream/音楽/アルバム %231/note.txt").headers["Content-Security-Policy"])
+        assertEquals(HttpStatusCode.BadRequest, client.get("/api/v1/fs/disk1/stream/%2E%2E/etc/passwd").status)
+    }
+
+    @Test
+    fun playlistListsMediaWithAbsoluteStreamUrls() = test {
+        File(disk, "音楽/b").mkdirs()
+        File(disk, "音楽/02.mp3").writeText("x")
+        File(disk, "音楽/01 #a.mp3").writeText("x")
+        File(disk, "音楽/movie.mp4").writeText("x")
+        File(disk, "音楽/cover.jpg").writeText("x")
+        File(disk, "音楽/b/03.flac").writeText("x")
+
+        val res = client.get("/api/v1/fs/disk1/playlist.m3u8?path=/音楽") { header(HttpHeaders.Host, "192.168.1.5:8080") }
+        assertEquals(HttpStatusCode.OK, res.status)
+        assertTrue(res.headers[HttpHeaders.ContentType]!!.startsWith("audio/x-mpegurl"))
+        val lines = res.bodyAsText().lines().filter { it.startsWith("http") }
+        assertEquals(
+            listOf(
+                "http://192.168.1.5:8080/api/v1/fs/disk1/stream/%E9%9F%B3%E6%A5%BD/01%20%23a.mp3",
+                "http://192.168.1.5:8080/api/v1/fs/disk1/stream/%E9%9F%B3%E6%A5%BD/02.mp3",
+                "http://192.168.1.5:8080/api/v1/fs/disk1/stream/%E9%9F%B3%E6%A5%BD/movie.mp4",
+            ),
+            lines,
+        )
+        val audio = client.get("/api/v1/fs/disk1/playlist.m3u8?path=/音楽&recursive=1&type=audio").bodyAsText()
+        assertTrue(audio, audio.contains("/b/03.flac") && !audio.contains("movie.mp4"))
+        assertEquals(HttpStatusCode.BadRequest, client.get("/api/v1/fs/disk1/playlist.m3u8?path=/音楽/02.mp3").status)
+    }
+
+    @Test
+    fun extensionStreamsItsDataOnly() = test {
+        installJisui()
+        File(disk, ".jisui/data/a.mp3").writeText("AUDIO")
+        File(disk, "secret.mp3").writeText("SECRET")
+        assertEquals("AUDIO", client.get("/x/jisui/api/stream/a.mp3").bodyAsText())
+        assertEquals(HttpStatusCode.NotFound, client.get("/x/jisui/api/stream/secret.mp3").status)
+        val list = client.get("/x/jisui/api/playlist.m3u8") { header(HttpHeaders.Host, "nas:8080") }.bodyAsText()
+        assertTrue(list, list.contains("http://nas:8080/x/jisui/api/stream/a.mp3") && !list.contains("books"))
+    }
+
+    @Test
+    fun streamAcceptsBasicAuthForExternalPlayers() = test {
+        config = ServerConfig(password = "pass")
+        File(disk, "a.mp3").writeText("AUDIO")
+        val noCookies = createClient { }
+        val denied = noCookies.get("/api/v1/fs/disk1/stream/a.mp3")
+        assertEquals(HttpStatusCode.Unauthorized, denied.status)
+        assertTrue(denied.headers[HttpHeaders.WWWAuthenticate]!!.startsWith("Basic"))
+        val basic = "Basic " + java.util.Base64.getEncoder().encodeToString("any:pass".toByteArray())
+        assertEquals("AUDIO", noCookies.get("/api/v1/fs/disk1/stream/a.mp3") { header(HttpHeaders.Authorization, basic) }.bodyAsText())
+        assertEquals(HttpStatusCode.OK, noCookies.get("/api/v1/fs/disk1/playlist.m3u8?path=/") { header(HttpHeaders.Authorization, basic) }.status)
+        // ほかの API は Basic では通さない（ブラウザにパスワードの入力欄を出さない）
+        val other = noCookies.get("/api/v1/volumes") { header(HttpHeaders.Authorization, basic) }
+        assertEquals(HttpStatusCode.Unauthorized, other.status)
+        assertEquals(null, other.headers[HttpHeaders.WWWAuthenticate])
+    }
+
+    @Test
     fun passwordProtectsApiAndExtensions() = test {
         installJisui()
         config = ServerConfig(password = "pass")
@@ -231,6 +305,45 @@ class AnasServerTest {
         assertEquals(HttpStatusCode.Forbidden, client.req())
         config = ServerConfig(fullAccessExtensions = setOf("jisui"))
         assertEquals(HttpStatusCode.OK, client.req())
+    }
+
+    @Test
+    fun homeExtensionReplacesRootOnlyWhenAllowed() = test {
+        File(disk, ".home/app").mkdirs()
+        File(disk, ".home/anas.json").writeText("""{"anas":1,"id":"home","name":"ホーム","scope":"all","home":true}""")
+        File(disk, ".home/app/index.html").writeText("<h1>my home</h1>")
+        // home: true なのに scope が self のものは読み込めない
+        File(disk, ".bad/app").mkdirs()
+        File(disk, ".bad/anas.json").writeText("""{"anas":1,"id":"bad","name":"x","home":true}""")
+        registry.scan()
+        val noRedirect = createClient { followRedirects = false }
+        suspend fun root(query: String = "") = noRedirect.get("/$query")
+
+        // 選んだだけ（NAS 全体へのアクセスを許可していない）では標準の画面
+        config = ServerConfig(homeExtension = "home")
+        assertEquals("<h1>NAS</h1>", root().bodyAsText())
+        assertTrue(client.get("/api/v1/extensions").bodyAsText().contains("\"homeCapable\":true"))
+
+        config = ServerConfig(homeExtension = "home", fullAccessExtensions = setOf("home"))
+        val home = root()
+        assertEquals(HttpStatusCode.Found, home.status)
+        assertEquals("/x/home/", home.headers[HttpHeaders.Location])
+        assertTrue(client.get("/api/v1/extensions").bodyAsText().contains("\"isHome\":true"))
+        // 標準の画面はいつでも開ける
+        assertEquals("<h1>NAS</h1>", root("?ui=default").bodyAsText())
+
+        // 無効にすると標準の画面に戻る
+        config = config.copy(disabledExtensions = setOf("home"))
+        assertEquals("<h1>NAS</h1>", root().bodyAsText())
+
+        // パスワードがあれば、ログインするまではログイン画面（標準の画面）
+        config = ServerConfig(homeExtension = "home", fullAccessExtensions = setOf("home"), password = "pw")
+        assertEquals("<h1>NAS</h1>", root().bodyAsText())
+
+        // home: true でない拡張機能はホームにできない
+        config = ServerConfig(homeExtension = "bad", fullAccessExtensions = setOf("bad"))
+        assertEquals("<h1>NAS</h1>", root().bodyAsText())
+        assertTrue(client.get("/api/v1/extensions").bodyAsText().contains("scope"))
     }
 
     @Test

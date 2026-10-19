@@ -50,9 +50,9 @@ import java.net.URI
  *
  * | URL | 中身 |
  * |---|---|
- * | `/` | NAS の Web UI（assets/web） |
+ * | `/` | NAS の Web UI（assets/web）。ホーム画面にした拡張機能があれば `/x/<id>/` へ移す（`/?ui=default` で標準の画面） |
  * | `/_anas/sdk.js` ほか | 拡張機能用の SDK・共通 CSS・仕様書 |
- * | `/api/v1/...` | NAS のファイル API |
+ * | `/api/v1/...` | NAS のファイル API（`fs/<volume>/stream/<path>`・`fs/<volume>/playlist.m3u8` は外部のプレーヤー向けに Basic 認証も受け付ける） |
  * | `/x/<id>/` | 拡張機能の UI（`/.<id>/app/`） |
  * | `/x/<id>/api/...` | 拡張機能のファイル API（`/.<id>/data/` の中だけ）と外部サイトへのアクセス（[OutboundHttp]） |
  */
@@ -150,6 +150,13 @@ fun Application.anasModule(
         val isPublicApi = path == "/api/v1/info" || path == "/api/v1/login" || path == "/api/v1/logout"
         val needsAuth = (path.startsWith("/api/") && !isPublicApi) || path.startsWith("/x/")
         if (needsAuth && !isAuthorized(call)) {
+            // 再生用の URL は外部のプレーヤー（Cookie を持たない）からも開けるよう、Basic 認証でも通す
+            if (isStreamPath(path)) {
+                if (basicAuthorized(call)) return@intercept
+                call.response.header(HttpHeaders.WWWAuthenticate, "Basic realm=\"ANAS\", charset=\"UTF-8\"")
+                call.respond(HttpStatusCode.Unauthorized, ErrorResponse("ログインしてください", "unauthorized"))
+                return@intercept finish()
+            }
             if (path.startsWith("/api/") || path.contains("/api/")) {
                 call.respond(HttpStatusCode.Unauthorized, ErrorResponse("ログインしてください", "unauthorized"))
             } else {
@@ -178,8 +185,23 @@ fun Application.anasModule(
         apiRoutes(backend, registry, config, sessions, ::isAuthorized, search)
         extensionRoutes(backend, registry, config, outbound, search)
         webDavRoutes(backend, config)
-        staticRoutes(assets)
+        staticRoutes(assets, homeUrl = { call ->
+            // ログイン前はログイン画面（標準の画面）を出す。?ui=default・?next= のときも標準の画面
+            val params = call.request.queryParameters
+            if (params["ui"] == "default" || params.contains("next") || !isAuthorized(call)) null
+            else registry.extensions.value.firstOrNull { it.canBeHome(config()) }?.let { "/x/${it.id}/" }
+        })
     }
+}
+
+/** `/api/v1/fs/<volume>/stream/...` と `/api/v1/fs/<volume>/playlist.m3u8`（拡張機能の `/x/<id>/api/` も同じ） */
+private fun isStreamPath(path: String): Boolean {
+    val rest = when {
+        path.startsWith("/api/v1/fs/") -> path.removePrefix("/api/v1/fs/").substringAfter('/', "")
+        path.startsWith("/x/") -> path.removePrefix("/x/").substringAfter('/', "").takeIf { it.startsWith("api/") }?.removePrefix("api/")
+        else -> null
+    } ?: return false
+    return rest.startsWith("stream/") || rest == "playlist.m3u8"
 }
 
 private fun refererExtensionId(referer: String?): String? {
@@ -370,10 +392,14 @@ private fun extensionCsp(call: ApplicationCall, ext: InstalledExtension, fullAcc
     ).joinToString("; ") { it.trim() }
 }
 
-private val HOST_PATTERN = Regex("^[A-Za-z0-9.\\-\\[\\]:]+$")
+internal val HOST_PATTERN = Regex("^[A-Za-z0-9.\\-\\[\\]:]+$")
 
-private fun Route.staticRoutes(assets: AssetSource) {
-    get("/") { call.respondAsset(assets, "index.html") }
+/** [homeUrl] が URL を返したら、`/` はそこ（ホーム画面にした拡張機能）へ移す */
+private fun Route.staticRoutes(assets: AssetSource, homeUrl: (ApplicationCall) -> String? = { null }) {
+    get("/") {
+        val home = homeUrl(call)
+        if (home != null) call.respondRedirect(home) else call.respondAsset(assets, "index.html")
+    }
     get("/_anas/{file}") {
         val file = call.parameters["file"]!!
         call.respondAsset(assets, file)

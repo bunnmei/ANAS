@@ -72,6 +72,9 @@
     <string name="extension_full_access_desc">この拡張機能は data フォルダの外も読み書きしようとしています。信頼できるものだけ許可してください。</string>
     <string name="extension_network">インターネットへのアクセスを許可</string>
     <string name="extension_network_desc">この端末から次のサイトにアクセスし、取ってきたデータを拡張機能に渡します。信頼できるものだけ許可してください。</string>
+    <string name="extension_home">ホーム画面にする</string>
+    <string name="extension_home_desc">NAS の URL を開いたとき、標準の画面の代わりにこの拡張機能を出します。標準の画面は URL の最後に ?ui=default を付けるといつでも開けます。</string>
+    <string name="extension_home_needs_access">NAS の最初の画面の代わりに使えます。使うには、有効にして「NAS 全体へのアクセスを許可」をオンにしてください。</string>
     <string name="extension_network_added">許可したあとに新しいサイトが追加されました。使うにはもう一度許可してください。</string>
     <string name="extension_open">開く</string>
     <string name="extension_error">エラー: %1$s</string>

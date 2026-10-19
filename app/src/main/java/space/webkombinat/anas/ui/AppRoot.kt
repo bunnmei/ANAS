@@ -1,5 +1,6 @@
 package space.webkombinat.anas.ui
 
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -111,7 +112,8 @@ private fun MainScaffold(mode: AppMode) {
             NavHost(
                 nav,
                 startDestination = if (client) Tab.BROWSE.route else Tab.HOME.route,
-                modifier = Modifier.padding(padding),
+                // 中の画面で imePadding() を使うとき、タブなどの分を二重に引かないように
+                modifier = Modifier.padding(padding).consumeWindowInsets(padding),
             ) {
                 composable(Tab.HOME.route) { HomeScreen() }
                 composable(Tab.EXTENSIONS.route) { ExtensionsScreen() }

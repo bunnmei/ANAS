@@ -75,6 +75,7 @@ ANAS は Android 端末のストレージ（本体のフォルダ・SD カード
 | `scope` | | `"self"`（既定）: `data/` の中だけ。`"all"`: NAS 全体の API（`/api/v1/...`）も使う。`"all"` は**ユーザーがアプリで許可したときだけ**有効 |
 | `externalOrigins` | | CDN など、読み込み・通信を許可する外部オリジン（`https://` のみ）。例: `["https://cdn.jsdelivr.net"]`。**ANAS は LAN 内で使うので、インターネットに繋がらないこともあります。ライブラリはできるだけ `app/` に同梱してください** |
 | `network` | | ANAS（端末）経由でアクセスする外部サイト。`https://host`・`https://host:port`、または `https://*.example.com`（サブドメインすべて。`*.com` のような広すぎるものは不可）。**ユーザーがアプリで許可したときだけ**有効（[2.7](#27-外部サイトへのアクセスnetwork)） |
+| `home` | | `true` なら、NAS の最初の画面（`/`）の代わりに使える（[2.8](#28-nas-の最初の画面を差し替えるhome)）。`"scope": "all"` も必要 |
 
 未知のキーは無視されます。不正なときは拡張機能の一覧にエラー内容が表示されます。
 
@@ -161,6 +162,20 @@ await anas.writeJson("/.meta/4000000000.json", { title }, { overwrite: true });
 - 端末がインターネットに繋がっていないと `AnasError(502, "upstream")` になります。
 - 外部サイトの規約は守ってください。HTML の構造は予告なく変わるので、公開 API（書籍なら Google Books API や国立国会図書館サーチなど）があればそちらのほうが安定します。
 
+### 2.8 NAS の最初の画面を差し替える（home）
+
+NAS の URL（`/`）を開いたときの画面を、自分で作った拡張機能にできます。
+
+```json
+{ "anas": 1, "id": "myhome", "name": "わたしの NAS", "scope": "all", "home": true }
+```
+
+- アプリの「拡張」タブで **「NAS 全体へのアクセスを許可」** と **「ホーム画面にする」** をオンにすると、`/` を開いたときに `/x/<id>/` へ移ります（選べるのは 1 つだけ）。
+- **標準の画面は `/?ui=default` でいつでも開けます。** 拡張機能を消した・無効にした・アクセスの許可を取り消したときは、自動で標準の画面に戻ります。
+- パスワードを設定しているときは、ログインするまでは標準のログイン画面が出ます（ログイン後に移ります）。
+- NAS 全体のファイルは SDK の `nas`（[3章](#3-sdk)）で扱います。見本はサンプル集の `home_simple`（ストレージとファイルの一覧・アップロード・拡張機能へのリンク）。
+- 標準の画面の機能（検索・ZIP ダウンロード・拡張機能の管理など）を全部作り直す必要はありません。足りないものは `/?ui=default` へのリンクを置いてください。
+
 ## 3. SDK
 
 `/_anas/sdk.js` を ES Module として読み込みます。型定義は `/_anas/sdk.d.ts`。
@@ -185,6 +200,8 @@ await anas.writeJson("/.meta/4000000000.json", { title }, { overwrite: true });
 | `anas.exists(path)` | `boolean` |
 | `anas.fileUrl(path, { download? })` | ファイルの URL。`<img src>`・`<iframe src>`・`<video src>`・`<a href>` にそのまま使える。動画のシーク（Range）にも対応 |
 | `anas.zipUrl(path)` | フォルダを中身ごと zip にしてダウンロードさせる URL。`<a href>` に使う（zip の中はフォルダ名から始まる。`/` なら `data/`） |
+| `anas.streamUrl(path)` | 音声・動画を再生するための URL（`/x/<id>/api/stream/<path>`）。中身は `fileUrl` と同じで Range 対応。URL の最後がファイル名になるので、`<audio>`・`<video>` にも、拡張子で形式を見分ける外部のプレーヤー（VLC など）にもそのまま渡せる |
+| `anas.playlistUrl(path, { recursive?, type? })` | フォルダの音声・動画の再生リスト（M3U8）の URL。`recursive: true` でサブフォルダも、`type: "audio"` / `"video"` で種類を絞れる |
 | `anas.readText(path)` / `readJson(path)` / `readBlob(path)` | ファイルを読む |
 | `anas.upload(path, blobOrString, options)` | ファイルを書く。`path` は**書き込み先のファイル**のパス。途中のフォルダは自動で作る |
 | `anas.writeText(path, text, options)` / `writeJson(path, value, options)` | テキスト・JSON を書く |
@@ -194,6 +211,23 @@ await anas.writeJson("/.meta/4000000000.json", { title }, { overwrite: true });
 | `anas.search(q, { limit, hidden })` | `data/` の中のファイルを文章で探す（例: `"3日以内に追加したPDF"`・`"議事録のメモ"`）。ファイル名・フォルダ名・種類・日時・サイズから探し、中身は見ない。返り値は `{ q, query, hits, total, fuzzy, status }`（[4章](#4-http-api)）。`hidden: true` で `.` 始まりも含める |
 | `anas.fetch(url, init)` | 外部サイトに ANAS 経由でアクセスする（[2.7](#27-外部サイトへのアクセスnetwork)）。返り値はふつうの `Response`（`status`・`headers`・`url` は外部サイトのもの。`Set-Cookie` は除く）。`init` は `method`・`headers`・`body`（文字列・`Blob`・`ArrayBuffer`・`Uint8Array`・`URLSearchParams`）・`signal` |
 | `anas.fetchToFile(url, path, options)` | 外部サイトのファイルを `data/` の `path` に保存する。`options` は `init` と同じものに加えて `overwrite`（既定 `false`）・`mkdirs`（既定 `true`）。返り値は `{ entry, url, status, contentType }`。外部サイトが 2xx 以外なら `AnasError(502, "upstream_status")` で、ファイルは作られない |
+
+NAS 全体を扱う `nas`（`"scope": "all"` をアプリで許可された拡張機能だけ。それ以外は `AnasError(403, "scope")`）:
+
+```ts
+import { nas } from "/_anas/sdk.js";
+const volumes = await nas.volumes();                 // [{ id: "disk1", name, online, writable, totalBytes, freeBytes }]
+const disk = nas.volume("disk1");                    // パスはストレージのルートから
+const entries = await disk.list("/写真");
+img.src = disk.fileUrl("/写真/a.jpg");
+```
+
+| メソッド | 説明 |
+|---|---|
+| `nas.volumes()` | ストレージの一覧 |
+| `nas.volume(id)` | そのストレージを扱うクライアント。`anas` と同じ `list`・`stat`・`fileUrl`・`zipUrl`・`streamUrl`・`playlistUrl`・`read*`・`upload`・`write*`・`mkdir`・`rename`・`remove`・`search` が使える（`info`・`fetch`・`fetchToFile` は使えない） |
+| `nas.search(q, { limit, hidden })` | すべてのストレージから探す |
+| `nas.extensions()` | 入っている拡張機能の一覧（`url`・`iconUrl`・`isHome` など） |
 
 `options`（`UploadOptions`）:
 
@@ -248,6 +282,8 @@ SDK を使わずに直接呼ぶこともできます。パスはすべてクエ�
 | GET | `/x/<id>/api/list?path=/` | | `{ volume, path, entries: Entry[] }` |
 | GET | `/x/<id>/api/stat?path=/a.pdf` | | `Entry` |
 | GET | `/x/<id>/api/file?path=/a.pdf[&download=1]` | | ファイルの中身（`Range` 対応） |
+| GET | `/x/<id>/api/stream/<path>` | | `file` と同じ中身（`Range` 対応）。パスを URL に入れる形（各部分を URL エンコード）で、外部のプレーヤー向けに Basic 認証も受け付ける |
+| GET | `/x/<id>/api/playlist.m3u8?path=/music[&recursive=1][&type=audio\|video]` | | フォルダの音声・動画の再生リスト（`audio/x-mpegurl`、UTF-8）。各行は `stream` の絶対 URL。名前順、最大 5000 件、`.` で始まるものは含めない |
 | GET | `/x/<id>/api/zip?path=/books` | | フォルダを中身ごと zip にしたもの（`Content-Length` なし、Range 非対応） |
 | PUT | `/x/<id>/api/file?path=/a.pdf[&overwrite=1][&mkdirs=1]` | ファイルの中身そのまま | `201` + `Entry` |
 | POST | `/x/<id>/api/mkdir` | `{"path": "/books"}` | `Entry` |
@@ -304,7 +340,7 @@ SDK を使わずに直接呼ぶこともできます。パスはすべてクエ�
 <html lang="ja">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content">
   <title>Hello</title>
   <link rel="stylesheet" href="/_anas/base.css">
 </head>
@@ -340,6 +376,15 @@ SDK を使わずに直接呼ぶこともできます。パスはすべてクエ�
 ## 7. 共通 CSS（/_anas/base.css）
 
 使わなくても構いません。使うと ANAS 本体と同じ見た目になり、ライト/ダークも自動で切り替わります。
+
+ANAS アプリ（クライアントモード）の中で開いたときは、アプリのテーマが `<html data-anas-theme="dark">`（または `"light"`）として
+ページの JS より先に付きます。Android 9 の WebView は `prefers-color-scheme` がアプリの設定に従わないためです。
+base.css を使わずに自分でダークモードの色を書くときは、次のようにこの属性も見てください。
+
+```css
+@media (prefers-color-scheme: dark) { :root:not([data-anas-theme="light"]) { /* ダークの色 */ } }
+:root[data-anas-theme="dark"] { /* ダークの色 */ }
+```
 
 | クラス / 変数 | 用途 |
 |---|---|
@@ -382,3 +427,5 @@ ANAS の拡張機能を作ってください。仕様書（EXTENSION_SPEC.md）�
 - [ ] ページで作ったファイルのダウンロードは `<a href="blob:..." download="名前">` のクリックで行っている
 - [ ] ファイル名に `: * ? " < > |` などを使っていない
 - [ ] 置いたあとに「再スキャン」した
+- [ ] ホーム画面にする拡張機能なら、`"scope": "all"` と `"home": true` を書き、`/?ui=default`（標準の画面）へのリンクを置いた
+- [ ] スマホで使うなら、`<meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content">`（キーボードが出たときに画面が縮み、入力欄が隠れない）

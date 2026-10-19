@@ -4,6 +4,10 @@ import io.ktor.http.ContentDisposition
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.content.TextContent
+import io.ktor.http.encodeURLPathPart
+import io.ktor.http.withCharset
+import io.ktor.server.request.path
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.request.receive
 import io.ktor.server.request.receiveChannel
@@ -43,7 +47,7 @@ class FsScope(val volume: String, val base: SafePath, val writable: Boolean) {
 }
 
 /**
- * list / stat / file (GET・PUT) / zip / mkdir / rename / delete。
+ * list / stat / file (GET・PUT) / stream / playlist.m3u8 / zip / mkdir / rename / delete。
  * NAS の `/api/v1/fs/{volume}/` と拡張機能の `/x/{id}/api/` の両方で使う。
  */
 fun Route.fsRoutes(
@@ -78,6 +82,47 @@ fun Route.fsRoutes(
         val path = scope.abs(call.request.queryParameters["path"])
         val handle = backend.openRead(scope.volume, path)
         call.respondFile(handle, download = call.request.queryParameters["download"] == "1", sandbox = true)
+    }
+
+    // file と同じ中身を、パスを URL に入れて返す（/stream/音楽/a.mp3）。URL の最後がファイル名になるので、
+    // 拡張子で形式を見分ける外部のプレーヤー（VLC など）にもそのまま渡せる。Range 対応なのでシークもできる
+    get("stream/{path...}") {
+        val scope = scopeOf(call)
+        val path = scope.abs(call.parameters.getAll("path").orEmpty().joinToString("/"))
+        call.respondFile(backend.openRead(scope.volume, path), download = false, sandbox = true)
+    }
+
+    // フォルダの音声・動画の再生リスト（M3U8）。?path=&recursive=1&type=audio|video
+    get("playlist.m3u8") {
+        val scope = scopeOf(call)
+        val dir = scope.abs(call.request.queryParameters["path"])
+        val recursive = call.request.queryParameters["recursive"] == "1"
+        val kind = call.request.queryParameters["type"]?.takeIf { it == "audio" || it == "video" }
+        val items = mediaFiles(backend, scope.volume, dir, recursive, kind)
+        // 外部のプレーヤーは相対 URL を解決しないことがあるので、http://<host>/... の形で書く
+        val host = call.request.headers[HttpHeaders.Host]?.takeIf { HOST_PATTERN.matches(it) }
+        val streamBase = (if (host != null) "http://$host" else "") +
+            call.request.path().removeSuffix("playlist.m3u8") + "stream"
+        val body = buildString {
+            append("#EXTM3U\n")
+            for (e in items) {
+                val rel = SafePath.parse(e.path).relativeTo(scope.base) ?: continue
+                append("#EXTINF:-1,").append(e.name.substringBeforeLast('.').replace('\n', ' ')).append('\n')
+                append(streamBase)
+                for (segment in rel.segments) append('/').append(segment.encodeURLPathPart())
+                append('\n')
+            }
+        }
+        call.response.header(HttpHeaders.CacheControl, "no-cache")
+        call.response.header(
+            HttpHeaders.ContentDisposition,
+            ContentDisposition.Inline.withParameter(
+                ContentDisposition.Parameters.FileName,
+                "${dir.name.ifEmpty { scope.volume }}.m3u8",
+                encodeValue = true,
+            ).toString(),
+        )
+        call.respond(TextContent(body, ContentType("audio", "x-mpegurl").withCharset(Charsets.UTF_8)))
     }
 
     get("zip") {
@@ -149,7 +194,9 @@ suspend fun ApplicationCall.respondFile(handle: ReadHandle, download: Boolean, s
     val type = ContentType.parse(entry.mime)
     response.header(HttpHeaders.AcceptRanges, "bytes")
     response.header(HttpHeaders.CacheControl, "no-cache")
-    if (sandbox) response.header("Content-Security-Policy", "sandbox")
+    // 音声・動画はスクリプトが動かないので sandbox は要らない。付けるとページの origin が null になり、
+    // ブラウザ内蔵のプレーヤーが Range で読み直すときに CORS で止められて再生できない
+    if (sandbox && !isMedia(entry.mime)) response.header("Content-Security-Policy", "sandbox")
     val disposition = if (download) ContentDisposition.Attachment else ContentDisposition.Inline
     response.header(
         HttpHeaders.ContentDisposition,
@@ -172,6 +219,31 @@ suspend fun ApplicationCall.respondFile(handle: ReadHandle, download: Boolean, s
         }
     }
 }
+
+internal fun isMedia(mime: String): Boolean = mime.startsWith("audio/") || mime.startsWith("video/")
+
+/** [dir] の中の音声・動画（[kind] が "audio" / "video" ならそれだけ）。フォルダごとに名前順 */
+private suspend fun mediaFiles(backend: StorageBackend, volume: String, dir: SafePath, recursive: Boolean, kind: String?): List<Entry> {
+    val out = ArrayList<Entry>()
+    suspend fun walk(path: SafePath, depth: Int) {
+        val entries = backend.list(volume, path).sortedBy { it.name.lowercase() }
+        for (e in entries) {
+            if (out.size >= MAX_PLAYLIST) return
+            if (e.name.startsWith(".")) continue
+            if (e.isDir) {
+                if (recursive && depth < MAX_PLAYLIST_DEPTH) walk(SafePath.parse(e.path), depth + 1)
+            } else if (if (kind == null) isMedia(e.mime) else e.mime.startsWith("$kind/")) {
+                out += e
+            }
+        }
+    }
+    if (backend.stat(volume, dir)?.isDir != true) throw StorageException.NotDirectory(dir.toString())
+    walk(dir, 0)
+    return out
+}
+
+private const val MAX_PLAYLIST = 5000
+private const val MAX_PLAYLIST_DEPTH = 8
 
 private fun InputStream.copyLimited(out: OutputStream, limit: Long) {
     val buffer = ByteArray(64 * 1024)

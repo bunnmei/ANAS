@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -141,7 +142,9 @@ private fun WebContent(
     val context = LocalContext.current
     val state = remember { WebViewState() }
     var menu by remember { mutableStateOf(false) }
-    Column(Modifier.fillMaxSize()) {
+    // 画面いっぱいに描く設定（edge-to-edge）だと adjustResize が効かないので、
+    // キーボードの分だけ WebView を縮める（ノートの入力中の行がキーボードに隠れないように）
+    Column(Modifier.fillMaxSize().imePadding()) {
         TopAppBar(
             windowInsets = WindowInsets(0),
             title = {

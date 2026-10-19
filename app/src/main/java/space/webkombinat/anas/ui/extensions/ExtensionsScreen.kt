@@ -61,6 +61,7 @@ fun ExtensionsScreen(vm: ExtensionsViewModel = hiltViewModel()) {
     val baseUrl by vm.baseUrl.collectAsStateWithLifecycle()
     val scanning by vm.scanning.collectAsStateWithLifecycle()
     val volumes by vm.writableVolumes.collectAsStateWithLifecycle()
+    val homeId by vm.homeId.collectAsStateWithLifecycle()
     val snackbar = LocalSnackbar.current
     val context = LocalContext.current
     var creating by remember { mutableStateOf(false) }
@@ -83,6 +84,8 @@ fun ExtensionsScreen(vm: ExtensionsViewModel = hiltViewModel()) {
         onEnabledChange = { id, v -> vm.setEnabled(id, v) },
         onFullAccessChange = { id, v -> vm.setFullAccess(id, v) },
         onNetworkChange = { id, origins -> vm.setNetwork(id, origins) },
+        homeId = homeId,
+        onHomeChange = { id, on -> vm.setHome(id, on) },
     )
 
     if (creating) {
@@ -106,6 +109,8 @@ private fun ExtensionsContent(
     onEnabledChange: (String, Boolean) -> Unit,
     onFullAccessChange: (String, Boolean) -> Unit,
     onNetworkChange: (String, List<String>) -> Unit,
+    homeId: String? = null,
+    onHomeChange: (String, Boolean) -> Unit = { _, _ -> },
 ) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         Section(stringResource(R.string.extensions_title)) {
@@ -141,7 +146,7 @@ private fun ExtensionsContent(
                 Text(stringResource(R.string.extensions_empty), style = MaterialTheme.typography.bodyMedium)
             }
             extensions.forEach { ext ->
-                ExtensionCard(ext, serverRunning, onOpen, onEnabledChange, onFullAccessChange, onNetworkChange)
+                ExtensionCard(ext, serverRunning, onOpen, onEnabledChange, onFullAccessChange, onNetworkChange, ext.id == homeId, onHomeChange)
             }
             Spacer(Modifier.padding(8.dp))
         }
@@ -156,6 +161,8 @@ private fun ExtensionCard(
     onEnabledChange: (String, Boolean) -> Unit,
     onFullAccessChange: (String, Boolean) -> Unit,
     onNetworkChange: (String, List<String>) -> Unit,
+    homeSelected: Boolean,
+    onHomeChange: (String, Boolean) -> Unit,
 ) {
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -204,6 +211,20 @@ private fun ExtensionCard(
                         }
                     }
                     Switch(checked = allGranted, onCheckedChange = { onNetworkChange(ext.id, if (it) ext.network else emptyList()) })
+                }
+            }
+            if (ext.error == null && ext.homeCapable) {
+                // ホーム画面は NAS 全体を扱うので、全体へのアクセスを許可してから選べる
+                val canUse = ext.enabled && ext.fullAccess
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(stringResource(R.string.extension_home), style = MaterialTheme.typography.bodyMedium)
+                        Text(
+                            stringResource(if (canUse) R.string.extension_home_desc else R.string.extension_home_needs_access),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                    Switch(checked = homeSelected && canUse, enabled = canUse, onCheckedChange = { onHomeChange(ext.id, it) })
                 }
             }
             if (ext.error == null && ext.enabled) {

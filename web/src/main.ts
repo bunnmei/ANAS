@@ -1,5 +1,6 @@
 // NAS の Web UI。画面は「ファイル」（#/files/<volume>/<path>）・「検索」（#/search?q=）・「拡張機能」（#/extensions）
 import { $, h, icon, render, type IconName } from "./dom.js";
+import { mediaKind, play, playOnClick, type MediaKind, type Track } from "./player.js";
 import {
   AnasError,
   createClientForBase,
@@ -105,8 +106,29 @@ function iconFor(entry: Entry): IconName {
   if (entry.isDir) return "folder";
   if (entry.mime.startsWith("image/")) return "image";
   if (entry.mime.startsWith("video/")) return "video";
+  if (entry.mime.startsWith("audio/")) return "audio";
   if (entry.mime === "application/pdf") return "pdf";
   return "file";
+}
+
+/** 一覧の中の音声・動画を、種類ごとの再生リストにする（クリックしたものから順に再生する） */
+function trackLists(items: { client: AnasClient; entry: Entry }[]): Record<MediaKind, Track[]> {
+  const lists: Record<MediaKind, Track[]> = { audio: [], video: [] };
+  for (const t of items) {
+    const kind = mediaKind(t.entry);
+    if (kind) lists[kind].push(t);
+  }
+  return lists;
+}
+
+/** ファイル名のリンク。音声・動画はページの中のプレーヤーで開き、それ以外は新しいタブで開く */
+function fileLink(c: AnasClient, entry: Entry, lists: Record<MediaKind, Track[]>): HTMLAnchorElement {
+  const label = [icon(iconFor(entry)), h("span", {}, entry.name)];
+  const kind = mediaKind(entry);
+  if (!kind) return h("a", { href: c.fileUrl(entry.path), target: "_blank", rel: "noopener", class: "files__name" }, ...label);
+  const list = lists[kind];
+  const at = list.findIndex((t) => t.entry === entry);
+  return h("a", { href: c.streamUrl(entry.path), class: "files__name", onclick: playOnClick(list, at) }, ...label);
 }
 
 function writable(volume: string): boolean {
@@ -221,10 +243,20 @@ async function showFiles(volume: string, path: string): Promise<void> {
     reload();
   });
 
+  // 一覧（隠しファイルを除く）と、その中の音声・動画
+  const extFolders = new Set(state.extensions.filter((e) => e.volume === volume).map((e) => e.folder));
+  const entries = res.entries.filter(
+    (e) => state.showHidden || !e.name.startsWith(".") || extFolders.has(e.path),
+  );
+  const c = client(volume);
+  const lists = trackLists(entries.map((entry) => ({ client: c, entry })));
+  const hasMedia = lists.audio.length + lists.video.length > 0;
+
   const toolbar = h(
     "div",
     { class: "toolbar" },
-    canWrite && h("button", { class: "btn", onclick: () => fileInput.click() }, icon("upload"), "アップロード"),
+    lists.audio.length > 0 && h("button", { class: "btn", onclick: () => play(lists.audio, 0) }, icon("play"), "すべて再生"),
+    canWrite && h("button", { class: hasMedia ? "btn btn--tonal" : "btn", onclick: () => fileInput.click() }, icon("upload"), "アップロード"),
     canWrite && h("button", { class: "btn btn--tonal", onclick: () => folderInput.click() }, icon("upload"), "フォルダごと"),
     canWrite &&
       h(
@@ -251,6 +283,13 @@ async function showFiles(volume: string, path: string): Promise<void> {
       icon("zip"),
       "ZIP でダウンロード",
     ),
+    hasMedia &&
+      h(
+        "a",
+        { class: "btn btn--tonal", href: c.playlistUrl(path), title: "このフォルダの音声・動画を VLC などのプレーヤーで続けて再生する（M3U）" },
+        icon("playlist"),
+        "再生リスト",
+      ),
     h("button", { class: "btn btn--text", onclick: reload, title: "再読み込み" }, icon("refresh")),
     h("span", { class: "toolbar__spacer" }),
     h("label", { class: "check" }, hiddenToggle, "隠しファイルを表示"),
@@ -280,11 +319,7 @@ async function showFiles(volume: string, path: string): Promise<void> {
     : null;
 
   // 一覧
-  const extFolders = new Set(state.extensions.filter((e) => e.volume === volume).map((e) => e.folder));
-  const entries = res.entries.filter(
-    (e) => state.showHidden || !e.name.startsWith(".") || extFolders.has(e.path),
-  );
-  const rows = entries.map((e) => fileRow(volume, e, canWrite, reload));
+  const rows = entries.map((e) => fileRow(volume, e, canWrite, reload, lists));
   const list =
     rows.length > 0
       ? h(
@@ -304,12 +339,18 @@ async function showFiles(volume: string, path: string): Promise<void> {
   dropTarget = canWrite ? { volume, path, reload } : null;
 }
 
-function fileRow(volume: string, e: Entry, canWrite: boolean, reload: () => void): HTMLTableRowElement {
+function fileRow(
+  volume: string,
+  e: Entry,
+  canWrite: boolean,
+  reload: () => void,
+  lists: Record<MediaKind, Track[]>,
+): HTMLTableRowElement {
   const c = client(volume);
   const isExtFolder = e.isDir && state.extensions.some((x) => x.volume === volume && x.folder === e.path);
   const link = e.isDir
     ? h("a", { href: filesHash(volume, e.path), class: "files__name" }, icon(isExtFolder ? "extension" : "folder"), h("span", {}, e.name))
-    : h("a", { href: c.fileUrl(e.path), target: "_blank", rel: "noopener", class: "files__name" }, icon(iconFor(e)), h("span", {}, e.name));
+    : fileLink(c, e, lists);
 
   const actions = h(
     "td",
@@ -411,13 +452,16 @@ function statusLine(status: SearchStatus): HTMLElement {
   );
 }
 
-function searchRow(hit: SearchHit, showAdded: boolean): HTMLTableRowElement {
+function hitEntry(hit: SearchHit): Entry {
+  return { name: hit.name, path: hit.path, isDir: hit.isDir, size: hit.size, modified: hit.modified, mime: hit.mime };
+}
+
+function searchRow(hit: SearchHit, entry: Entry, showAdded: boolean, lists: Record<MediaKind, Track[]>): HTMLTableRowElement {
   const c = client(hit.volume);
   const parent = hit.path.split("/").slice(0, -1).join("/") || "/";
-  const entry: Entry = { name: hit.name, path: hit.path, isDir: hit.isDir, size: hit.size, modified: hit.modified, mime: hit.mime };
   const link = hit.isDir
     ? h("a", { href: filesHash(hit.volume, hit.path), class: "files__name" }, icon("folder"), h("span", {}, hit.name))
-    : h("a", { href: c.fileUrl(hit.path), target: "_blank", rel: "noopener", class: "files__name" }, icon(iconFor(entry)), h("span", {}, hit.name));
+    : fileLink(c, entry, lists);
   const where = h("div", { class: "where" }, h("a", { href: filesHash(hit.volume, parent) }, `${volumeName(hit.volume)}:${parent}`));
   const date = showAdded ? (hit.added ?? 0) : hit.modified;
   return h(
@@ -463,6 +507,8 @@ async function showSearch(q: string): Promise<void> {
     return;
   }
   const showAdded = res.query.timeField === "added";
+  const entries = res.hits.map(hitEntry);
+  const lists = trackLists(res.hits.map((hit, i) => ({ client: client(hit.volume), entry: entries[i]! })));
   const count = res.total > 1000 ? "1000 件以上" : `${res.total} 件`;
   const chips = res.query.summary.length > 0
     ? h("div", { class: "chips", "aria-label": "読み取った条件" }, ...res.query.summary.map((s) => h("span", { class: "chip" }, s)))
@@ -477,7 +523,7 @@ async function showSearch(q: string): Promise<void> {
             {},
             h("tr", {}, h("th", {}, "名前・場所"), h("th", { class: "num" }, "サイズ"), h("th", { class: "date" }, showAdded ? "追加日時" : "更新日時"), h("th", {})),
           ),
-          h("tbody", {}, ...res.hits.map((hit) => searchRow(hit, showAdded))),
+          h("tbody", {}, ...res.hits.map((hit, i) => searchRow(hit, entries[i]!, showAdded, lists))),
         )
       : h(
           "div",

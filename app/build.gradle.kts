@@ -18,9 +18,9 @@ android {
         minSdk = 28
         targetSdk = 37
         // リリースのたびに 1 以上増やす
-        versionCode = 2
+        versionCode = 3
         // CI (GitHub Actions) ではタグ名 (v1.2.0 → 1.2.0) を使う
-        versionName = System.getenv("VERSION_NAME") ?: "1.0.1"
+        versionName = System.getenv("VERSION_NAME") ?: "1.0.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -126,6 +126,7 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.webkit)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.service)

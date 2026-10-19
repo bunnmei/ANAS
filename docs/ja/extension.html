@@ -80,6 +80,7 @@
           <tr><td><code>scope</code></td><td><code>"self"</code>（既定）: data/ の中だけ。<code>"all"</code>: NAS 全体（アプリで許可したときだけ）</td></tr>
           <tr><td><code>externalOrigins</code></td><td>CDN など外部から読み込むときのオリジン（既定は外部通信なし）</td></tr>
           <tr><td><code>network</code></td><td>ANAS（端末）経由でアクセスする外部サイト。例: <code>["https://www.amazon.co.jp", "https://*.media-amazon.com"]</code>（アプリで許可したときだけ）</td></tr>
+          <tr><td><code>home</code></td><td><code>true</code> なら NAS の最初の画面の代わりに使える（<code>"scope": "all"</code> も必要。下の「NAS の画面を差し替える」）</td></tr>
         </tbody>
       </table>
     </div>
@@ -95,7 +96,8 @@
   });
   await anas.writeJson("/settings.json", { theme: "dark" }, { overwrite: true });
 &lt;/script&gt;</code></pre>
-    <p>ほかに <code>zipUrl</code>（フォルダごと zip でダウンロード）・<code>stat</code>・<code>exists</code>・<code>readText</code>・<code>readJson</code>・<code>listRecursive</code>・<code>mkdir</code>・<code>rename</code>・<code>remove</code> があります。<code>/_anas/base.css</code> を読み込むと ANAS と同じ見た目（ライト / ダーク自動切替）になります。</p>
+    <p>ほかに <code>zipUrl</code>（フォルダごと zip でダウンロード）・<code>streamUrl</code>（音声・動画の再生用。シークでき、VLC などにも渡せる）・<code>playlistUrl</code>（フォルダの再生リスト M3U8）・<code>stat</code>・<code>exists</code>・<code>readText</code>・<code>readJson</code>・<code>listRecursive</code>・<code>mkdir</code>・<code>rename</code>・<code>remove</code> があります。<code>/_anas/base.css</code> を読み込むと ANAS と同じ見た目（ライト / ダーク自動切替）になります。</p>
+    <p>ANAS アプリの中で開いたときは、アプリのテーマが <code>&lt;html data-anas-theme="dark"&gt;</code>（または <code>"light"</code>）として付きます（Android 9 では <code>prefers-color-scheme</code> がアプリの設定に従わないため）。base.css を使わずに自分でダークの色を書くときは、<code>:root[data-anas-theme="dark"]</code> も見てください。</p>
 
     <p><code>anas.search("3日以内に追加したPDF")</code> で、自分の <code>data/</code> の中のファイルを文章で探せます（ファイル名・種類・日時・サイズから）。</p>
 
@@ -108,6 +110,13 @@ const title = doc.querySelector("#productTitle")?.textContent?.trim();
 // 画像などはブラウザを通さずに data/ へ保存
 await anas.fetchToFile(imageUrl, "/.covers/4000000000.jpg", { overwrite: true });</code></pre>
     <p>使えるのは許可したサイトだけで、リダイレクト先も <code>network</code> に入っている必要があります。LAN 内の機器や端末自身にはアクセスしません。アプリの中（WebView）で開いたときも使えます。</p>
+
+    <h3 id="home">NAS の画面を差し替える</h3>
+    <p><code>anas.json</code> に <code>"scope": "all"</code> と <code>"home": true</code> を書き、アプリの「拡張」タブで「NAS 全体へのアクセスを許可」と「ホーム画面にする」をオンにすると、NAS の URL を開いたときにその拡張機能の画面が出ます。NAS 全体のファイルは SDK の <code>nas</code> で扱います。</p>
+<pre><code>import { nas } from "/_anas/sdk.js";
+const [disk] = await nas.volumes();
+const entries = await nas.volume(disk.id).list("/");   // ストレージのルートから</code></pre>
+    <p>標準の画面は、URL の最後に <code>?ui=default</code> を付ければいつでも開けます（例: <code>http://192.168.1.10:8080/?ui=default</code>）。拡張機能を無効にしたり消したりすると、自動で標準の画面に戻ります。</p>
 
     <h2 id="install">4. 入れ方</h2>
     <ol class="steps">
@@ -129,7 +138,11 @@ await anas.fetchToFile(imageUrl, "/.covers/4000000000.jpg", { overwrite: true })
       </div>
       <div class="card">
         <h3>ノート（.notes）</h3>
-        <p>Markdown（.md）のノートをプレビューで読み、ブラウザでそのまま編集。編集中は左右に並べてプレビュー、画像は貼り付けで保存、チェックボックスは押すだけで保存。</p>
+        <p>Markdown（.md）のノートをプレビューで読み、ブラウザでそのまま編集。編集中は左右に並べてプレビュー、行頭で <code>/</code> を打つと書き方の候補、画像は貼り付けで保存、チェックボックスは押すだけで保存。</p>
+      </div>
+      <div class="card">
+        <h3>シンプルなホーム（.home_simple）</h3>
+        <p>NAS の最初の画面を差し替える見本。ストレージとファイルの一覧、アップロード、拡張機能へのリンクだけの小さな画面です。</p>
       </div>
     </div>
 

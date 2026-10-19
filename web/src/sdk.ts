@@ -7,6 +7,7 @@
  * import { anas } from "/_anas/sdk.js";
  * const entries = await anas.list("/");              // data/ 直下の一覧
  * img.src = anas.fileUrl("/covers/a.jpg");           // <img> / <iframe> / <video> に使える URL
+ * audio.src = anas.streamUrl("/music/01 曲.mp3");    // 音声・動画の再生用（シーク可・外部プレーヤーにも渡せる）
  * await anas.upload("/books/a.pdf", file, { onProgress: (done, total) => ... });
  *
  * // anas.json の "network" に書いて、アプリで許可した外部サイトには、ANAS（端末）経由でアクセスできる
@@ -15,6 +16,15 @@
  * ```
  *
  * パスはすべて data/ フォルダからの相対パス（`/` 始まり）。data/ の外には出られない。
+ *
+ * `"scope": "all"` でアプリから NAS 全体へのアクセスを許可された拡張機能（ホーム画面にする拡張機能など）は、
+ * `nas` で NAS 全体を扱える:
+ *
+ * ```ts
+ * import { nas } from "/_anas/sdk.js";
+ * const [disk] = await nas.volumes();
+ * const files = await nas.volume(disk.id).list("/");   // ボリュームのルートからのパス
+ * ```
  * 型定義は /_anas/sdk.d.ts。仕様書は /_anas/spec.md。
  */
 
@@ -52,7 +62,24 @@ export interface ExtensionInfo {
   network: string[];
   /** network のうち、アプリで許可されているもの。anas.fetch() で使えるのはこれだけ */
   networkAllowed: string[];
+  /** anas.json に `"home": true`（NAS の最初の画面の代わりに使える） */
+  homeCapable: boolean;
+  /** アプリで「ホーム画面にする」を選んでいて、今 `/` を開くとこの拡張機能になる */
+  isHome: boolean;
   error?: string;
+}
+
+/** NAS のストレージ（SD カード・USB ドライブなど） */
+export interface Volume {
+  /** API に使う ID（`disk1` など） */
+  id: string;
+  /** 表示名 */
+  name: string;
+  /** つながっているか */
+  online: boolean;
+  writable: boolean;
+  totalBytes?: number;
+  freeBytes?: number;
 }
 
 export interface SelfInfo {
@@ -175,6 +202,16 @@ export interface AnasClient {
   fileUrl(path: string, options?: { download?: boolean }): string;
   /** フォルダを中身ごと zip にしてダウンロードさせる URL（`<a href>` に使う） */
   zipUrl(path: string): string;
+  /**
+   * 音声・動画などを再生するための URL（`.../stream/<path>`）。中身は fileUrl と同じで Range（シーク）に対応し、
+   * URL の最後がファイル名になるので `<audio>` / `<video>` にも外部のプレーヤー（VLC など）にも渡せる
+   */
+  streamUrl(path: string): string;
+  /**
+   * フォルダの音声・動画の再生リスト（M3U8）の URL。VLC などで開くとフォルダをまとめて再生できる。
+   * recursive: true でサブフォルダも含める。type で音声だけ・動画だけにできる
+   */
+  playlistUrl(path: string, options?: { recursive?: boolean; type?: "audio" | "video" }): string;
   readText(path: string): Promise<string>;
   readJson<T = unknown>(path: string): Promise<T>;
   readBlob(path: string): Promise<Blob>;
@@ -348,6 +385,16 @@ export function createClientForBase(apiBase: string, id = ""): AnasClient {
     zipUrl(path) {
       return url("zip", { path });
     },
+    streamUrl(path) {
+      const segments = path.split("/").filter(Boolean).map(encodeURIComponent);
+      return `${apiBase}/stream/${segments.join("/")}`;
+    },
+    playlistUrl(path, options = {}) {
+      const params: Record<string, string> = { path };
+      if (options.recursive) params.recursive = "1";
+      if (options.type) params.type = options.type;
+      return url("playlist.m3u8", params);
+    },
     async readText(path) {
       return (await getFile(path)).text();
     },
@@ -415,6 +462,42 @@ export function createClientForBase(apiBase: string, id = ""): AnasClient {
   };
   return client;
 }
+
+/**
+ * NAS 全体へのアクセス（`"scope": "all"` で、アプリで許可された拡張機能だけ。それ以外は AnasError(403, "scope")）。
+ * NAS の Web UI と同じ API（/api/v1）を使う
+ */
+export interface NasAccess {
+  /** ストレージの一覧 */
+  volumes(): Promise<Volume[]>;
+  /**
+   * ボリュームのファイルを扱うクライアント。パスはボリュームのルートから（`/` 始まり）。
+   * list・stat・fileUrl・zipUrl・streamUrl・playlistUrl・read*・upload・write*・mkdir・rename・remove・search が使える（info・fetch・fetchToFile は使えない）
+   */
+  volume(id: string): AnasClient;
+  /** すべてのボリュームから探す（返り値の path はボリュームのルートから） */
+  search(q: string, options?: { limit?: number; hidden?: boolean }): Promise<SearchResult>;
+  /** 入っている拡張機能の一覧 */
+  extensions(): Promise<ExtensionInfo[]>;
+}
+
+export const nas: NasAccess = {
+  async volumes() {
+    return (await (await check(await fetch("/api/v1/volumes"))).json()) as Volume[];
+  },
+  volume(id) {
+    return createClientForBase(`/api/v1/fs/${encodeURIComponent(id)}`);
+  },
+  async search(q, options = {}) {
+    const params = new URLSearchParams({ q });
+    if (options.limit) params.set("limit", String(options.limit));
+    if (options.hidden) params.set("hidden", "1");
+    return (await (await check(await fetch(`/api/v1/search?${params.toString()}`))).json()) as SearchResult;
+  },
+  async extensions() {
+    return (await (await check(await fetch("/api/v1/extensions"))).json()) as ExtensionInfo[];
+  },
+};
 
 /** 拡張機能 ID を指定してクライアントを作る */
 export function createClient(id: string): AnasClient {
