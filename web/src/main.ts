@@ -2,6 +2,7 @@
 import { $, h, icon, render, type IconName } from "./dom.js";
 import { mediaKind, play, playOnClick, type MediaKind, type Track } from "./player.js";
 import { viewKind, viewOnClick, type ViewKind } from "./viewer.js";
+import { pickFolder } from "./picker.js";
 import {
   AnasError,
   createClientForBase,
@@ -45,7 +46,47 @@ const state = {
   volumes: [] as Volume[],
   extensions: [] as ExtensionInfo[],
   showHidden: loadBool("anas.showHidden", false),
+  sort: loadSort(),
 };
+
+// ---- 並べ替え（フォルダはいつも先） ----
+
+type SortKey = "name" | "size" | "modified";
+interface Sort {
+  key: SortKey;
+  desc: boolean;
+}
+
+function loadSort(): Sort {
+  try {
+    const v = JSON.parse(localStorage.getItem("anas.sort") ?? "null") as Partial<Sort> | null;
+    if (v && (v.key === "name" || v.key === "size" || v.key === "modified")) return { key: v.key, desc: v.desc === true };
+  } catch {
+    // 壊れていたら既定
+  }
+  return { key: "name", desc: false };
+}
+
+function saveSort(sort: Sort): void {
+  try {
+    localStorage.setItem("anas.sort", JSON.stringify(sort));
+  } catch {
+    // プライベートモードなど
+  }
+}
+
+const collator = new Intl.Collator("ja", { numeric: true, sensitivity: "base" });
+
+function sortEntries(entries: Entry[], sort: Sort): Entry[] {
+  const dir = sort.desc ? -1 : 1;
+  return [...entries].sort((a, b) => {
+    if (a.isDir !== b.isDir) return a.isDir ? -1 : 1;
+    const byName = collator.compare(a.name, b.name);
+    if (sort.key === "name") return byName * dir;
+    const diff = sort.key === "size" ? a.size - b.size : a.modified - b.modified;
+    return (diff === 0 ? byName : Math.sign(diff)) * dir;
+  });
+}
 
 // ---- 共通 ----
 
@@ -259,8 +300,9 @@ async function showFiles(volume: string, path: string): Promise<void> {
 
   // 一覧（隠しファイルを除く）と、その中の音声・動画
   const extFolders = new Set(state.extensions.filter((e) => e.volume === volume).map((e) => e.folder));
-  const entries = res.entries.filter(
-    (e) => state.showHidden || !e.name.startsWith(".") || extFolders.has(e.path),
+  const entries = sortEntries(
+    res.entries.filter((e) => state.showHidden || !e.name.startsWith(".") || extFolders.has(e.path)),
+    state.sort,
   );
   const c = client(volume);
   const lists = trackLists(entries.map((entry) => ({ client: c, entry })));
@@ -333,13 +375,27 @@ async function showFiles(volume: string, path: string): Promise<void> {
     : null;
 
   // 一覧
-  const rows = entries.map((e) => fileRow(volume, e, canWrite, reload, lists));
+  const selection = createSelection(volume, path, canWrite, reload);
+  const rows = entries.map((e) => fileRow(volume, e, canWrite, reload, lists, selection));
+  selection.setAll(entries);
   const list =
     rows.length > 0
       ? h(
           "table",
           { class: "files" },
-          h("thead", {}, h("tr", {}, h("th", {}, "名前"), h("th", { class: "num" }, "サイズ"), h("th", { class: "date" }, "更新日時"), h("th", {}))),
+          h(
+            "thead",
+            {},
+            h(
+              "tr",
+              {},
+              h("th", { class: "files__check" }, selection.allBox),
+              sortHeader("名前", "name", "", reload),
+              sortHeader("サイズ", "size", "num", reload),
+              sortHeader("更新日時", "modified", "date", reload),
+              h("th", {}),
+            ),
+          ),
           h("tbody", {}, ...rows),
         )
       : h("div", { class: "empty" }, canWrite ? "空のフォルダです。ファイルをここにドラッグ＆ドロップできます。" : "空のフォルダです。");
@@ -349,8 +405,150 @@ async function showFiles(volume: string, path: string): Promise<void> {
       ? h("p", { class: "muted small" }, `空き ${formatBytes(vol.freeBytes)} / ${formatBytes(vol.totalBytes)}`)
       : null;
 
-  render(main, crumbs, toolbar, banner, list, space);
+  render(main, crumbs, toolbar, banner, selection.bar, list, space);
   dropTarget = canWrite ? { volume, path, reload } : null;
+}
+
+function sortHeader(label: string, key: SortKey, cls: string, reload: () => void): HTMLTableCellElement {
+  const active = state.sort.key === key;
+  const mark = active ? (state.sort.desc ? " ↓" : " ↑") : "";
+  return h(
+    "th",
+    { class: cls, "aria-sort": active ? (state.sort.desc ? "descending" : "ascending") : null },
+    h(
+      "button",
+      {
+        class: "sort",
+        type: "button",
+        title: `${label}で並べ替え`,
+        onclick: () => {
+          // 同じ列をもう一度押すと逆順。日時とサイズは新しい・大きい順から
+          state.sort = active ? { key, desc: !state.sort.desc } : { key, desc: key !== "name" };
+          saveSort(state.sort);
+          reload();
+        },
+      },
+      label + mark,
+    ),
+  );
+}
+
+/** 一覧の複数選択と、選んだものへの操作（移動・コピー・削除） */
+interface Selection {
+  bar: HTMLElement;
+  allBox: HTMLInputElement;
+  box(entry: Entry): HTMLInputElement;
+  setAll(entries: Entry[]): void;
+}
+
+function createSelection(volume: string, path: string, canWrite: boolean, reload: () => void): Selection {
+  const c = client(volume);
+  const selected = new Map<string, Entry>();
+  const boxes = new Map<string, HTMLInputElement>();
+  let all: Entry[] = [];
+  const count = h("strong", {});
+  const writableVolumes = () => state.volumes.filter((v) => v.online && writable(v.id));
+
+  const transfer = async (move: boolean) => {
+    const items = [...selected.values()];
+    const verb = move ? "移動" : "コピー";
+    const targets = writableVolumes().map((v) => ({ id: v.id, name: v.name }));
+    if (targets.length === 0) return toast("書き込めるストレージがありません", true);
+    const dest = await pickFolder({
+      title: `${items.length} 件の${verb}先`,
+      action: `ここに${verb}`,
+      volumes: targets,
+      start: { volume, path },
+      client,
+      disabled: (t) => {
+        if (move && t.volume === volume && t.path === path) return "元と同じフォルダです";
+        const inside = items.find((e) => e.isDir && t.volume === volume && (t.path === e.path || t.path.startsWith(e.path + "/")));
+        return inside ? `「${inside.name}」の中には${verb}できません` : null;
+      },
+    });
+    if (!dest) return;
+    const errors: string[] = [];
+    let done = 0;
+    for (const e of items) {
+      toast(`${verb}中… ${done + 1} / ${items.length}「${e.name}」`);
+      try {
+        const options = dest.volume === volume ? {} : { toVolume: dest.volume };
+        await (move ? c.move(e.path, dest.path, options) : c.copy(e.path, dest.path, options));
+      } catch (err) {
+        errors.push(`「${e.name}」: ${errorMessage(err)}`);
+      }
+      done++;
+    }
+    if (errors.length > 0) toast(`${verb}できなかったもの ${errors.length} 件\n${errors.join("\n")}`, true);
+    else toast(`${items.length} 件を${verb}しました`);
+    reload();
+  };
+
+  const remove = async () => {
+    const items = [...selected.values()];
+    const dirs = items.some((e) => e.isDir) ? "\nフォルダの中身もすべて削除されます。" : "";
+    if (!confirm(`${items.length} 件を削除しますか？${dirs}`)) return;
+    const errors: string[] = [];
+    for (const e of items) {
+      try {
+        await c.remove(e.path);
+      } catch (err) {
+        errors.push(`「${e.name}」: ${errorMessage(err)}`);
+      }
+    }
+    if (errors.length > 0) toast(`削除できなかったもの ${errors.length} 件\n${errors.join("\n")}`, true);
+    else toast(`${items.length} 件を削除しました`);
+    reload();
+  };
+
+  const bar = h(
+    "div",
+    { class: "selbar", hidden: true },
+    count,
+    canWrite && h("button", { class: "btn btn--tonal", type: "button", onclick: () => void transfer(true) }, icon("move"), "移動"),
+    h("button", { class: "btn btn--tonal", type: "button", onclick: () => void transfer(false) }, icon("copy"), "コピー"),
+    canWrite && h("button", { class: "btn btn--tonal btn--danger", type: "button", onclick: () => void remove() }, icon("delete"), "削除"),
+    h("span", { class: "toolbar__spacer" }),
+    h("button", { class: "btn btn--text", type: "button", onclick: () => setEvery(false) }, "選択を解除"),
+  );
+  const allBox = h("input", { type: "checkbox", "aria-label": "すべて選択", title: "すべて選択" });
+  allBox.addEventListener("change", () => setEvery(allBox.checked));
+
+  function update(): void {
+    bar.hidden = selected.size === 0;
+    count.textContent = `${selected.size} 件を選択`;
+    allBox.checked = all.length > 0 && selected.size === all.length;
+    allBox.indeterminate = selected.size > 0 && selected.size < all.length;
+  }
+
+  function setEvery(on: boolean): void {
+    selected.clear();
+    for (const e of all) {
+      if (on) selected.set(e.path, e);
+      const b = boxes.get(e.path);
+      if (b) b.checked = on;
+    }
+    update();
+  }
+
+  return {
+    bar,
+    allBox,
+    box(entry) {
+      const b = h("input", { type: "checkbox", "aria-label": `「${entry.name}」を選択` });
+      b.addEventListener("change", () => {
+        if (b.checked) selected.set(entry.path, entry);
+        else selected.delete(entry.path);
+        update();
+      });
+      boxes.set(entry.path, b);
+      return b;
+    },
+    setAll(entries) {
+      all = entries;
+      update();
+    },
+  };
 }
 
 function fileRow(
@@ -359,6 +557,7 @@ function fileRow(
   canWrite: boolean,
   reload: () => void,
   lists: Lists,
+  selection: Selection,
 ): HTMLTableRowElement {
   const c = client(volume);
   const isExtFolder = e.isDir && state.extensions.some((x) => x.volume === volume && x.folder === e.path);
@@ -414,6 +613,7 @@ function fileRow(
   return h(
     "tr",
     {},
+    h("td", { class: "files__check" }, selection.box(e)),
     h("td", {}, link),
     h("td", { class: "num" }, e.isDir ? "" : formatBytes(e.size)),
     h("td", { class: "date" }, formatDate(e.modified)),

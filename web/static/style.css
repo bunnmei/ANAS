@@ -228,3 +228,50 @@ body.has-viewer { overflow: hidden; }
   .viewer__bar .btn--icon { min-width: 32px; padding: 5px; }
   .viewer__text { font-size: 0.8rem; padding: 10px 12px; }
 }
+
+/* 並べ替え（列の見出し） */
+.sort { all: unset; cursor: pointer; color: inherit; font: inherit; }
+.sort:hover, .sort:focus-visible { color: var(--anas-text); text-decoration: underline; }
+
+/* 複数選択 */
+.files .files__check { width: 1%; padding-right: 0; }
+.files__check input { width: 18px; height: 18px; margin: 0; vertical-align: middle; accent-color: var(--anas-accent); }
+/* 選んでいる間だけ、画面の下に浮かせる（上のバーはスマホで高さが変わるので下にする） */
+.selbar {
+  position: fixed; z-index: 30; left: 50%; bottom: calc(16px + env(safe-area-inset-bottom)); transform: translateX(-50%);
+  width: max-content; max-width: calc(100vw - 24px);
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 8px 12px; border-radius: var(--anas-radius);
+  background: var(--anas-accent-soft); color: var(--anas-text); box-shadow: 0 6px 24px rgb(0 0 0 / 0.25);
+}
+body.has-player .selbar { bottom: 148px; }
+/* バーで一覧の最後の行が隠れないように */
+body:has(.selbar:not([hidden])) #main { padding-bottom: 120px; }
+.selbar[hidden] { display: none; }
+.toast { white-space: pre-line; }
+
+/* 移動・コピー先を選ぶダイアログ */
+.picker {
+  width: min(520px, calc(100vw - 24px)); max-height: min(640px, calc(100dvh - 24px)); padding: 16px;
+  display: flex; flex-direction: column; gap: 8px;
+  border: 1px solid var(--anas-border); border-radius: var(--anas-radius);
+  background: var(--anas-surface); color: var(--anas-text); box-shadow: 0 12px 40px rgb(0 0 0 / 0.3);
+}
+.picker:not([open]) { display: none; }
+.picker::backdrop { background: rgb(0 0 0 / 0.45); }
+.picker__title { margin: 0; font-size: 1.05rem; }
+.picker__volumes { display: flex; gap: 4px; flex-wrap: wrap; }
+.picker__volumes .nav__item { border: 0; cursor: pointer; font: inherit; }
+.picker__crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 2px; font-size: 0.9rem; }
+.picker__crumb { all: unset; cursor: pointer; padding: 2px 6px; border-radius: 6px; }
+.picker__crumb:hover { background: var(--anas-surface-2); }
+.picker__crumb:last-child { font-weight: 700; }
+.picker__list { list-style: none; margin: 0; padding: 0; overflow: auto; flex: 1; min-height: 160px; border: 1px solid var(--anas-border); border-radius: 8px; }
+.picker__list li { border-bottom: 1px solid var(--anas-border); }
+.picker__list li:last-child { border-bottom: 0; }
+.picker__list li.muted, .picker__list li.error { padding: 12px; }
+.picker__list button { all: unset; box-sizing: border-box; cursor: pointer; display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; word-break: break-all; }
+.picker__list button:hover { background: var(--anas-surface-2); }
+.picker__list .icon { color: var(--anas-accent); }
+.picker__reason { margin: 0; }
+.picker__actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }

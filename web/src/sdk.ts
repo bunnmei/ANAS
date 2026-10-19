@@ -222,6 +222,13 @@ export interface AnasClient {
   /** フォルダを作る（途中のフォルダも作る）。すでにあれば何もしない */
   mkdir(path: string): Promise<Entry>;
   rename(path: string, newName: string): Promise<Entry>;
+  /**
+   * ファイル・フォルダ（中身ごと）を toDir の中へ同じ名前で移す。同じ名前のものがあれば AnasError(409)。
+   * toVolume でほかのストレージへ移せるのは nas.volume(id) のクライアントだけ（コピーしてから消すので時間がかかる）
+   */
+  move(path: string, toDir: string, options?: { toVolume?: string }): Promise<Entry>;
+  /** ファイル・フォルダ（中身ごと）を toDir の中へ同じ名前でコピーする。options は move と同じ */
+  copy(path: string, toDir: string, options?: { toVolume?: string }): Promise<Entry>;
   /** ファイル、またはフォルダを中身ごと削除する */
   remove(path: string): Promise<void>;
   /**
@@ -422,6 +429,12 @@ export function createClientForBase(apiBase: string, id = ""): AnasClient {
     rename(path, newName) {
       return post<Entry>("rename", { path, newName });
     },
+    move(path, toDir, options = {}) {
+      return post<Entry>("move", { path, toDir, toVolume: options.toVolume });
+    },
+    copy(path, toDir, options = {}) {
+      return post<Entry>("copy", { path, toDir, toVolume: options.toVolume });
+    },
     async remove(path) {
       await post("delete", { path });
     },
@@ -472,7 +485,7 @@ export interface NasAccess {
   volumes(): Promise<Volume[]>;
   /**
    * ボリュームのファイルを扱うクライアント。パスはボリュームのルートから（`/` 始まり）。
-   * list・stat・fileUrl・zipUrl・streamUrl・playlistUrl・read*・upload・write*・mkdir・rename・remove・search が使える（info・fetch・fetchToFile は使えない）
+   * list・stat・fileUrl・zipUrl・streamUrl・playlistUrl・read*・upload・write*・mkdir・rename・move・copy・remove・search が使える（info・fetch・fetchToFile は使えない）
    */
   volume(id: string): AnasClient;
   /** すべてのボリュームから探す（返り値の path はボリュームのルートから） */
