@@ -208,6 +208,31 @@ class SafStorageBackend(
         resolve(vol, target)?.toEntry(target.toString()) ?: throw StorageException.Io("名前を変更できません: $path")
     }
 
+    override suspend fun move(volume: String, path: SafePath, toDir: SafePath): Entry? = withContext(Dispatchers.IO) {
+        if (path.isRoot) throw StorageException.Io("ルートは移動できません")
+        val target = toDir.child(path.name)
+        val vol = vol(volume)
+        val row = resolve(vol, path) ?: throw notFoundOrOffline(vol, path)
+        val from = requireDir(vol, path.parent)
+        val to = requireDir(vol, toDir)
+        checkWritable(vol, to)
+        if (resolve(vol, target) != null) throw StorageException.AlreadyExists(target.toString())
+        // 本体・SD・USB（ExternalStorageProvider）は対応している。対応していなければコピーしてもらう
+        if (row.flags and Document.FLAG_SUPPORTS_MOVE == 0) return@withContext null
+        val moved = try {
+            DocumentsContract.moveDocument(resolver, vol.uri(row.docId), vol.uri(from.docId), vol.uri(to.docId))
+        } catch (_: UnsupportedOperationException) {
+            null
+        } catch (e: Exception) {
+            throw StorageException.Io("移動できません: $path", e)
+        } finally {
+            invalidate(vol, path)
+            invalidate(vol, target)
+        }
+        if (moved == null) return@withContext null
+        resolve(vol, target)?.toEntry(target.toString()) ?: throw StorageException.Io("移動したものが見つかりません: $target")
+    }
+
     // ---- パス → ドキュメント ----
 
     private fun resolve(vol: Vol, path: SafePath): Row? {

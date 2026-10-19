@@ -31,6 +31,10 @@ data class PathRequest(val path: String)
 @Serializable
 data class RenameRequest(val path: String, val newName: String)
 
+/** 移動・コピー。[toDir] の中へ同じ名前で入れる。[toVolume] はほかのストレージへ（NAS の API だけ） */
+@Serializable
+data class TransferRequest(val path: String, val toDir: String, val toVolume: String? = null)
+
 @Serializable
 data class ListResponse(
     val volume: String,

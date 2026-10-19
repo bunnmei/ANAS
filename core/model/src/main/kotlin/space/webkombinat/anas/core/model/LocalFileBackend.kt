@@ -132,4 +132,17 @@ class LocalFileBackend(
         }
         dest.toEntry(target)
     }
+
+    override suspend fun move(volume: String, path: SafePath, toDir: SafePath): Entry = withContext(Dispatchers.IO) {
+        if (path.isRoot) throw StorageException.Io("ルートは移動できません")
+        val target = toDir.child(path.name)
+        val f = writableFile(volume, path)
+        val dir = file(volume, toDir)
+        val dest = File(dir, path.name)
+        if (!f.exists()) throw StorageException.NotFound(path.toString())
+        if (!dir.isDirectory) throw StorageException.NotFound(toDir.toString())
+        if (dest.exists()) throw StorageException.AlreadyExists(target.toString())
+        if (!f.renameTo(dest)) throw StorageException.Io("移動できません: $path")
+        dest.toEntry(target)
+    }
 }

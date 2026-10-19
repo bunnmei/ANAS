@@ -262,15 +262,16 @@ private fun Route.apiRoutes(
     get("volumes") { call.respond(backend.volumes()) }
 
     route("fs/{volume}") {
+        suspend fun volumeScope(volume: String): FsScope {
+            val info = backend.volumes().firstOrNull { it.id == volume } ?: throw StorageException.NotFound(volume)
+            return FsScope(volume, SafePath.ROOT, writable = info.writable && !config().readOnly)
+        }
         fsRoutes(
             backend = backend,
-            scopeOf = { call ->
-                val volume = call.parameters["volume"]!!
-                val info = backend.volumes().firstOrNull { it.id == volume } ?: throw StorageException.NotFound(volume)
-                FsScope(volume, SafePath.ROOT, writable = info.writable && !config().readOnly)
-            },
+            scopeOf = { call -> volumeScope(call.parameters["volume"]!!) },
             listExtra = { scope, path -> registry.containing(scope.volume, path)?.toInfo(config()) },
             search = search,
+            volumeScope = ::volumeScope,
         )
     }
 

@@ -133,7 +133,7 @@ class SearchService(
 }
 
 /**
- * 書き込み・フォルダ作成・名前の変更・削除を、その場で索引にも反映するバックエンド。
+ * 書き込み・フォルダ作成・名前の変更・移動・削除を、その場で索引にも反映するバックエンド。
  * 索引の更新に失敗しても、ファイルの操作そのものは成功として返す（次の走査で直る）。
  */
 class IndexingStorageBackend(
@@ -167,6 +167,12 @@ class IndexingStorageBackend(
 
     override suspend fun rename(volume: String, path: SafePath, newName: String): Entry {
         val entry = delegate.rename(volume, path, newName)
+        quietly { index.move(volume, path, SafePath.parse(entry.path)) }
+        return entry
+    }
+
+    override suspend fun move(volume: String, path: SafePath, toDir: SafePath): Entry? {
+        val entry = delegate.move(volume, path, toDir) ?: return null
         quietly { index.move(volume, path, SafePath.parse(entry.path)) }
         return entry
     }

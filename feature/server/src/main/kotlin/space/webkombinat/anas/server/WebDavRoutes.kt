@@ -245,7 +245,7 @@ private class WebDav(private val backend: StorageBackend, private val config: ()
         val dstVolume = dst.volume!!
         if (move) requireWritable(srcVolume)
         requireWritable(dstVolume)
-        val entry = backend.stat(srcVolume, src.path) ?: throw StorageException.NotFound(src.path.toString())
+        if (backend.stat(srcVolume, src.path) == null) throw StorageException.NotFound(src.path.toString())
         if (srcVolume == dstVolume && (dst.path == src.path || dst.path.relativeTo(src.path) != null)) {
             throw forbidden("自分自身の中には${if (move) "移動" else "コピー"}できません")
         }
@@ -255,29 +255,9 @@ private class WebDav(private val backend: StorageBackend, private val config: ()
         if (existed && !overwrite) throw ApiException("同じ名前のものがあります", HttpStatusCode.PreconditionFailed, "exists")
         if (existed) backend.delete(dstVolume, dst.path)
 
-        if (move && srcVolume == dstVolume && src.path.parent == dst.path.parent) {
-            backend.rename(srcVolume, src.path, dst.path.name)
-        } else {
-            copyTree(srcVolume, entry, dstVolume, dst.path)
-            if (move) backend.delete(srcVolume, src.path)
-        }
+        if (move) FileOps.move(backend, srcVolume, src.path, dstVolume, dst.path)
+        else FileOps.copy(backend, srcVolume, src.path, dstVolume, dst.path)
         call.respond(if (existed) HttpStatusCode.NoContent else HttpStatusCode.Created)
-    }
-
-    /** StorageBackend に移動・コピーがないので、1つずつ読み書きする */
-    private suspend fun copyTree(srcVolume: String, src: Entry, dstVolume: String, dst: SafePath) {
-        if (src.isDir) {
-            backend.mkdir(dstVolume, dst.parent, dst.name)
-            for (child in backend.list(srcVolume, SafePath.parse(src.path))) {
-                if (child.name.startsWith(TEMP_PREFIX)) continue
-                copyTree(srcVolume, child, dstVolume, dst.child(child.name))
-            }
-        } else {
-            val handle = backend.openRead(srcVolume, SafePath.parse(src.path))
-            backend.write(dstVolume, dst.parent, dst.name, overwrite = false) { out ->
-                withContext(Dispatchers.IO) { handle.open(0).use { it.copyTo(out) } }
-            }
-        }
     }
 
     /**

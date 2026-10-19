@@ -240,6 +240,58 @@ class AnasServerTest {
         assertEquals(null, other.headers[HttpHeaders.WWWAuthenticate])
     }
 
+    private suspend fun ApplicationTestBuilder.postJson(path: String, body: String) = client.post(path) {
+        contentType(ContentType.Application.Json)
+        setBody(body)
+    }
+
+    @Test
+    fun movesAndCopiesWithinAndAcrossVolumes() {
+        val disk2 = tmp.newFolder("disk2")
+        backend = LocalFileBackend(mapOf("disk1" to disk, "disk2" to disk2))
+        registry = ExtensionRegistry(backend)
+        File(disk, "a/sub").mkdirs()
+        File(disk, "a/sub/x.txt").writeText("X")
+        File(disk, "a/y.txt").writeText("Y")
+        File(disk, "b").mkdirs()
+        test {
+            // 同じボリュームの中で移動（フォルダごと）
+            val moved = postJson("/api/v1/fs/disk1/move", """{"path":"/a/sub","toDir":"/b"}""")
+            assertEquals(HttpStatusCode.OK, moved.status)
+            assertTrue(moved.bodyAsText().contains("\"path\":\"/b/sub\""))
+            assertEquals("X", File(disk, "b/sub/x.txt").readText())
+            assertFalse(File(disk, "a/sub").exists())
+
+            // コピー（元は残る）。同じ名前があれば 409
+            assertEquals(HttpStatusCode.OK, postJson("/api/v1/fs/disk1/copy", """{"path":"/a/y.txt","toDir":"/b"}""").status)
+            assertEquals("Y", File(disk, "a/y.txt").readText())
+            assertEquals("Y", File(disk, "b/y.txt").readText())
+            assertEquals(HttpStatusCode.Conflict, postJson("/api/v1/fs/disk1/copy", """{"path":"/a/y.txt","toDir":"/b"}""").status)
+
+            // 自分の中へは移せない
+            assertEquals(HttpStatusCode.BadRequest, postJson("/api/v1/fs/disk1/move", """{"path":"/b","toDir":"/b/sub"}""").status)
+            assertEquals(HttpStatusCode.NotFound, postJson("/api/v1/fs/disk1/move", """{"path":"/a/y.txt","toDir":"/nothing"}""").status)
+
+            // ほかのボリュームへ（コピーしてから消す）
+            val across = postJson("/api/v1/fs/disk1/move", """{"path":"/b","toDir":"/","toVolume":"disk2"}""")
+            assertEquals(HttpStatusCode.OK, across.status)
+            assertEquals("X", File(disk2, "b/sub/x.txt").readText())
+            assertEquals("Y", File(disk2, "b/y.txt").readText())
+            assertFalse(File(disk, "b").exists())
+        }
+    }
+
+    @Test
+    fun extensionCannotMoveOutsideItsData() = test {
+        installJisui()
+        assertEquals(HttpStatusCode.OK, postJson("/x/jisui/api/copy", """{"path":"/books/a.pdf","toDir":"/"}""").status)
+        assertEquals("PDFDATA", File(disk, ".jisui/data/a.pdf").readText())
+        // パスはいつも data/ からなので、外へは出られない。ほかのボリュームも指定できない
+        assertEquals(HttpStatusCode.BadRequest, postJson("/x/jisui/api/copy", """{"path":"/a.pdf","toDir":"/../.."}""").status)
+        assertEquals(HttpStatusCode.BadRequest, postJson("/x/jisui/api/move", """{"path":"/a.pdf","toDir":"/","toVolume":"disk1"}""").status)
+        assertTrue(File(disk, ".jisui/data/a.pdf").exists())
+    }
+
     @Test
     fun passwordProtectsApiAndExtensions() = test {
         installJisui()

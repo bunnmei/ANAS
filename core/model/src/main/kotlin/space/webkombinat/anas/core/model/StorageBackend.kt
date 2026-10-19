@@ -72,6 +72,12 @@ interface StorageBackend {
     suspend fun delete(volume: String, path: SafePath)
 
     suspend fun rename(volume: String, path: SafePath, newName: String): Entry
+
+    /**
+     * [path] を同じボリュームの [toDir] の中へ、同じ名前のまま移す。[toDir] に同じ名前のものがあれば [StorageException.AlreadyExists]。
+     * ストレージがその場での移動に対応していなければ null を返す（呼ぶ側でコピーしてから消す）
+     */
+    suspend fun move(volume: String, path: SafePath, toDir: SafePath): Entry?
 }
 
 /** [mkdir] を1階層ずつ繰り返して、[path] までのフォルダをすべて作る */

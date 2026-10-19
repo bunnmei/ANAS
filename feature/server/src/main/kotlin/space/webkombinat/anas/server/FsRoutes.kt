@@ -47,7 +47,7 @@ class FsScope(val volume: String, val base: SafePath, val writable: Boolean) {
 }
 
 /**
- * list / stat / file (GET・PUT) / stream / playlist.m3u8 / zip / mkdir / rename / delete。
+ * list / stat / file (GET・PUT) / stream / playlist.m3u8 / zip / mkdir / rename / move / copy / delete。
  * NAS の `/api/v1/fs/{volume}/` と拡張機能の `/x/{id}/api/` の両方で使う。
  */
 fun Route.fsRoutes(
@@ -55,7 +55,27 @@ fun Route.fsRoutes(
     scopeOf: suspend (ApplicationCall) -> FsScope,
     listExtra: (FsScope, SafePath) -> ExtensionInfo? = { _, _ -> null },
     search: SearchService? = null,
+    /** 移動・コピーの toVolume で、ほかのボリュームを使うとき。null ならほかのボリュームへは送れない */
+    volumeScope: (suspend (String) -> FsScope)? = null,
 ) {
+    /** 移動・コピーの共通部分。返すのは移動・コピー後の項目 */
+    suspend fun transfer(call: ApplicationCall, move: Boolean): Entry {
+        val scope = scopeOf(call)
+        val body = call.receive<TransferRequest>()
+        val src = scope.abs(body.path)
+        if (src == scope.base) throw IllegalArgumentException("このフォルダは${if (move) "移動" else "コピー"}できません")
+        val target = when (val v = body.toVolume) {
+            null, scope.volume -> scope
+            else -> volumeScope?.invoke(v) ?: throw IllegalArgumentException("ほかのストレージへは送れません")
+        }
+        if (move) scope.requireWritable()
+        target.requireWritable()
+        val dst = target.abs(body.toDir).child(src.name)
+        val entry = if (move) FileOps.move(backend, scope.volume, src, target.volume, dst)
+        else FileOps.copy(backend, scope.volume, src, target.volume, dst)
+        return target.rel(entry)
+    }
+
     get("search") {
         val scope = scopeOf(call)
         val res = searchIn(search, call, volume = scope.volume, base = scope.base)
@@ -173,6 +193,10 @@ fun Route.fsRoutes(
         if (path == scope.base) throw IllegalArgumentException("このフォルダは名前を変えられません")
         call.respond(scope.rel(backend.rename(scope.volume, path, body.newName)))
     }
+
+    // 移動・コピー（フォルダは中身ごと）。{"path": "/a.txt", "toDir": "/b", "toVolume": "disk2"}
+    post("move") { call.respond(transfer(call, move = true)) }
+    post("copy") { call.respond(transfer(call, move = false)) }
 
     post("delete") {
         val scope = scopeOf(call)
