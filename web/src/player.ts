@@ -51,7 +51,6 @@ function show(): void {
   const { client, entry } = track;
   const kind = mediaKind(entry) ?? "audio";
 
-  stopMedia();
   root ??= document.body.appendChild(h("section", { class: "player", "aria-label": "プレーヤー" }));
   root.className = `player player--${kind}`;
   document.body.classList.toggle("has-player", kind === "audio");
@@ -60,26 +59,17 @@ function show(): void {
     pushed = true;
   }
 
-  const el = h(kind, {
-    class: "player__media",
-    src: client.streamUrl(entry.path),
-    controls: true,
-    autoplay: true,
-    playsinline: true,
-    preload: "metadata",
-  });
-  media = el;
-  const message = h("p", { class: "player__error", hidden: true });
-  el.addEventListener("ended", () => {
-    if (index < tracks.length - 1) step(1);
-  });
-  el.addEventListener("error", () => {
-    if (el !== media || !el.getAttribute("src")) return;
-    const ext = entry.name.includes(".") ? entry.name.split(".").pop()!.toUpperCase() : "";
-    message.textContent =
-      `再生できませんでした。${ext ? `この形式（${ext}）や` : ""}中の圧縮方式によっては、ブラウザでは再生できません。` +
-      "ダウンロードするか、「再生リスト」から VLC などのプレーヤーで開いてください。";
-    message.hidden = false;
+  // 同じ種類なら同じ要素で src だけ替える（自動再生の制限は要素ごとなので、
+  // 一度タップで再生した要素なら次の曲もそのまま再生できる）
+  if (!media || media.tagName.toLowerCase() !== kind) {
+    stopMedia();
+    media = createMedia(kind);
+  }
+  const el = media;
+  el.src = client.streamUrl(entry.path);
+  // タップの処理の中で play() を呼ぶ（autoplay 属性だけだと、スマホではタップによる再生と見なされない）
+  el.play().catch(() => {
+    // 自動再生が止められたときは、コントロールの再生ボタンで始めてもらう
   });
 
   const title = h(
@@ -97,8 +87,30 @@ function show(): void {
     h("a", { class: "btn btn--icon", title: "ダウンロード", href: client.fileUrl(entry.path, { download: true }), download: entry.name }, icon("download")),
     h("button", { class: "btn btn--icon", title: "閉じる", onclick: () => close() }, icon("close")),
   );
-  render(root, bar, h("div", { class: "player__stage" }, el), message);
+  // 再生中の要素は外さずに、まわりだけ入れ替える
+  const stage = el.parentElement ?? h("div", { class: "player__stage" }, el);
+  for (const child of [...root.children]) if (child !== stage) child.remove();
+  root.prepend(bar);
+  root.append(stage, h("p", { class: "player__error", hidden: true }));
   updateMediaSession(entry);
+}
+
+function createMedia(kind: MediaKind): HTMLMediaElement {
+  const el = h(kind, { class: "player__media", controls: true, playsinline: true, preload: "metadata" });
+  el.addEventListener("ended", () => {
+    if (index < tracks.length - 1) step(1);
+  });
+  el.addEventListener("error", () => {
+    const entry = tracks[index]?.entry;
+    const message = root?.querySelector<HTMLElement>(".player__error");
+    if (el !== media || !el.getAttribute("src") || !entry || !message) return;
+    const ext = entry.name.includes(".") ? entry.name.split(".").pop()!.toUpperCase() : "";
+    message.textContent =
+      `再生できませんでした。${ext ? `この形式（${ext}）や` : ""}中の圧縮方式によっては、ブラウザでは再生できません。` +
+      "ダウンロードするか、「再生リスト」から VLC などのプレーヤーで開いてください。";
+    message.hidden = false;
+  });
+  return el;
 }
 
 function step(delta: number): void {

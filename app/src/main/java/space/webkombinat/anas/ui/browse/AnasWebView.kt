@@ -282,6 +282,8 @@ fun AnasWebView(
                 settings.builtInZoomControls = true
                 settings.displayZoomControls = false
                 settings.setSupportMultipleWindows(false)
+                // 曲が終わったら次の曲へ自動で進めるため（開くのは LAN の NAS のページだけ）
+                settings.mediaPlaybackRequiresUserGesture = false
                 CookieManager.getInstance().setAcceptCookie(true)
 
                 // ページの JS より先に <html data-anas-theme="dark|light"> を付ける（base.css が見る）
