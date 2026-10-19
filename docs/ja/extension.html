@@ -81,6 +81,7 @@
           <tr><td><code>externalOrigins</code></td><td>CDN など外部から読み込むときのオリジン（既定は外部通信なし）</td></tr>
           <tr><td><code>network</code></td><td>ANAS（端末）経由でアクセスする外部サイト。例: <code>["https://www.amazon.co.jp", "https://*.media-amazon.com"]</code>（アプリで許可したときだけ）</td></tr>
           <tr><td><code>home</code></td><td><code>true</code> なら NAS の最初の画面の代わりに使える（<code>"scope": "all"</code> も必要。下の「NAS の画面を差し替える」）</td></tr>
+          <tr><td><code>opens</code></td><td>この拡張機能で開けるファイルの拡張子。例: <code>[".csv", ".tsv"]</code>（<code>"scope": "all"</code> も必要。下の「珍しい形式のファイルを開く」）</td></tr>
         </tbody>
       </table>
     </div>
@@ -96,7 +97,7 @@
   });
   await anas.writeJson("/settings.json", { theme: "dark" }, { overwrite: true });
 &lt;/script&gt;</code></pre>
-    <p>ほかに <code>zipUrl</code>（フォルダごと zip でダウンロード）・<code>streamUrl</code>（音声・動画の再生用。シークでき、VLC などにも渡せる）・<code>playlistUrl</code>（フォルダの再生リスト M3U8）・<code>stat</code>・<code>exists</code>・<code>readText</code>・<code>readJson</code>・<code>listRecursive</code>・<code>mkdir</code>・<code>rename</code>・<code>remove</code> があります。<code>/_anas/base.css</code> を読み込むと ANAS と同じ見た目（ライト / ダーク自動切替）になります。</p>
+    <p>ほかに <code>zipUrl</code>（フォルダごと zip でダウンロード）・<code>streamUrl</code>（音声・動画の再生用。シークでき、VLC などにも渡せる）・<code>playlistUrl</code>（フォルダの再生リスト M3U8）・<code>stat</code>・<code>exists</code>・<code>readText</code>・<code>readJson</code>・<code>listRecursive</code>・<code>mkdir</code>・<code>rename</code>・<code>move</code>・<code>copy</code>・<code>remove</code> があります。<code>/_anas/base.css</code> を読み込むと ANAS と同じ見た目（ライト / ダーク自動切替）になります。</p>
     <p>ANAS アプリの中で開いたときは、アプリのテーマが <code>&lt;html data-anas-theme="dark"&gt;</code>（または <code>"light"</code>）として付きます（Android 9 では <code>prefers-color-scheme</code> がアプリの設定に従わないため）。base.css を使わずに自分でダークの色を書くときは、<code>:root[data-anas-theme="dark"]</code> も見てください。</p>
 
     <p><code>anas.search("3日以内に追加したPDF")</code> で、自分の <code>data/</code> の中のファイルを文章で探せます（ファイル名・種類・日時・サイズから）。</p>
@@ -117,6 +118,13 @@ await anas.fetchToFile(imageUrl, "/.covers/4000000000.jpg", { overwrite: true })
 const [disk] = await nas.volumes();
 const entries = await nas.volume(disk.id).list("/");   // ストレージのルートから</code></pre>
     <p>標準の画面は、URL の最後に <code>?ui=default</code> を付ければいつでも開けます（例: <code>http://192.168.1.10:8080/?ui=default</code>）。拡張機能を無効にしたり消したりすると、自動で標準の画面に戻ります。</p>
+
+    <h3 id="opens">珍しい形式のファイルを開く</h3>
+    <p>NAS の画面は、画像・テキスト・PDF・音声・動画をその場で表示します。それ以外の形式（KiCad のデータ、CAD、独自のログなど）は、拡張機能で開けるようにします。<code>anas.json</code> に <code>"scope": "all"</code> と <code>"opens": [".csv"]</code> を書き、アプリで「NAS 全体へのアクセスを許可」をオンにすると、NAS の一覧でそのファイルを開いたときに拡張機能の画面に渡されます。</p>
+<pre><code>import { openedFile } from "/_anas/sdk.js";
+const file = openedFile();   // { volume, path, name, client } か null
+if (file) show(await file.client.readText(file.path));</code></pre>
+    <p>見本はサンプルの「CSV ビューア」です。</p>
 
     <h2 id="install">4. 入れ方</h2>
     <ol class="steps">
@@ -143,6 +151,10 @@ const entries = await nas.volume(disk.id).list("/");   // ストレージのル�
       <div class="card">
         <h3>シンプルなホーム（.home_simple）</h3>
         <p>NAS の最初の画面を差し替える見本。ストレージとファイルの一覧、アップロード、拡張機能へのリンクだけの小さな画面です。</p>
+      </div>
+      <div class="card">
+        <h3>CSV ビューア（.csv_viewer）</h3>
+        <p>NAS の .csv・.tsv を表で見る、ファイルを開く拡張機能（<code>opens</code>）の見本。Excel の Shift_JIS の CSV も読め、絞り込みと並べ替えができます。大きなファイルは先頭 20 MB だけ読みます。</p>
       </div>
     </div>
 

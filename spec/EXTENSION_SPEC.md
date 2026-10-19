@@ -76,6 +76,7 @@ ANAS は Android 端末のストレージ（本体のフォルダ・SD カード
 | `externalOrigins` | | CDN など、読み込み・通信を許可する外部オリジン（`https://` のみ）。例: `["https://cdn.jsdelivr.net"]`。**ANAS は LAN 内で使うので、インターネットに繋がらないこともあります。ライブラリはできるだけ `app/` に同梱してください** |
 | `network` | | ANAS（端末）経由でアクセスする外部サイト。`https://host`・`https://host:port`、または `https://*.example.com`（サブドメインすべて。`*.com` のような広すぎるものは不可）。**ユーザーがアプリで許可したときだけ**有効（[2.7](#27-外部サイトへのアクセスnetwork)） |
 | `home` | | `true` なら、NAS の最初の画面（`/`）の代わりに使える（[2.8](#28-nas-の最初の画面を差し替えるhome)）。`"scope": "all"` も必要 |
+| `opens` | | この拡張機能で開けるファイルの拡張子（例: `[".csv", ".tsv"]`。`.` で始まる英小文字）。NAS の画面でそのファイルを開くと、この拡張機能の画面に渡される（[2.9](#29-ファイルを開く拡張機能opens)）。`"scope": "all"` も必要 |
 
 未知のキーは無視されます。不正なときは拡張機能の一覧にエラー内容が表示されます。
 
@@ -176,6 +177,31 @@ NAS の URL（`/`）を開いたときの画面を、自分で作った拡張機
 - NAS 全体のファイルは SDK の `nas`（[3章](#3-sdk)）で扱います。見本はサンプル集の `home_simple`（ストレージとファイルの一覧・アップロード・拡張機能へのリンク）。
 - 標準の画面の機能（検索・ZIP ダウンロード・拡張機能の管理など）を全部作り直す必要はありません。足りないものは `/?ui=default` へのリンクを置いてください。
 
+### 2.9 ファイルを開く拡張機能（opens）
+
+ブラウザで表示できない形式（KiCad のデータ、CAD、独自のログなど）は、拡張機能で開けるようにします。
+NAS の画面（標準の画面）は、画像・テキスト・PDF・音声・動画を自分で表示します。それ以外の形式のための仕組みです。
+
+```json
+{ "anas": 1, "id": "csv_viewer", "name": "CSV ビューア", "scope": "all", "opens": [".csv", ".tsv"] }
+```
+
+- アプリで「NAS 全体へのアクセス」を許可すると使えるようになります（ファイルを読むため）。無効にした拡張機能は使われません。
+- NAS の一覧で該当するファイルを開くと、`/x/<id>/?volume=<ボリューム>&path=<パス>` が開きます（一覧の名前の横に拡張機能の名前が出ます）。
+  同じ拡張子を複数の拡張機能が `opens` に書いていたら、先に見つかったもの（ボリューム・フォルダ名の順）を使います。
+- 拡張機能の側では、SDK の `openedFile()` でファイルを受け取り、`file.client`（`nas.volume(volume)` と同じ）で読みます。
+
+```ts
+import { openedFile } from "/_anas/sdk.js";
+const file = openedFile();          // { volume, path, name, client } か null
+if (file) {
+  const text = await file.client.readText(file.path);
+  // 大きなファイルは fetch(file.client.fileUrl(file.path), { headers: { Range: "bytes=0-1048575" } }) で先頭だけ読める
+}
+```
+
+- 見本はサンプル集の `csv_viewer`（Shift_JIS の判定、大きなファイルは先頭 20 MB だけ読む）。
+
 ## 3. SDK
 
 `/_anas/sdk.js` を ES Module として読み込みます。型定義は `/_anas/sdk.d.ts`。
@@ -207,6 +233,8 @@ NAS の URL（`/`）を開いたときの画面を、自分で作った拡張機
 | `anas.writeText(path, text, options)` / `writeJson(path, value, options)` | テキスト・JSON を書く |
 | `anas.mkdir(path)` | フォルダを作る（途中も作る、既存なら何もしない） |
 | `anas.rename(path, newName)` | 名前を変える（同じフォルダ内だけ） |
+| `anas.move(path, toDir)` | ファイル・フォルダ（中身ごと）を `toDir` の中へ同じ名前で移す。同じ名前のものがあれば `AnasError(409)` |
+| `anas.copy(path, toDir)` | ファイル・フォルダ（中身ごと）を `toDir` の中へ同じ名前でコピーする |
 | `anas.remove(path)` | 削除（フォルダは中身ごと） |
 | `anas.search(q, { limit, hidden })` | `data/` の中のファイルを文章で探す（例: `"3日以内に追加したPDF"`・`"議事録のメモ"`）。ファイル名・フォルダ名・種類・日時・サイズから探し、中身は見ない。返り値は `{ q, query, hits, total, fuzzy, status }`（[4章](#4-http-api)）。`hidden: true` で `.` 始まりも含める |
 | `anas.fetch(url, init)` | 外部サイトに ANAS 経由でアクセスする（[2.7](#27-外部サイトへのアクセスnetwork)）。返り値はふつうの `Response`（`status`・`headers`・`url` は外部サイトのもの。`Set-Cookie` は除く）。`init` は `method`・`headers`・`body`（文字列・`Blob`・`ArrayBuffer`・`Uint8Array`・`URLSearchParams`）・`signal` |
@@ -225,9 +253,10 @@ img.src = disk.fileUrl("/写真/a.jpg");
 | メソッド | 説明 |
 |---|---|
 | `nas.volumes()` | ストレージの一覧 |
-| `nas.volume(id)` | そのストレージを扱うクライアント。`anas` と同じ `list`・`stat`・`fileUrl`・`zipUrl`・`streamUrl`・`playlistUrl`・`read*`・`upload`・`write*`・`mkdir`・`rename`・`remove`・`search` が使える（`info`・`fetch`・`fetchToFile` は使えない） |
+| `nas.volume(id)` | そのストレージを扱うクライアント。`anas` と同じ `list`・`stat`・`fileUrl`・`zipUrl`・`streamUrl`・`playlistUrl`・`read*`・`upload`・`write*`・`mkdir`・`rename`・`move`・`copy`・`remove`・`search` が使える（`info`・`fetch`・`fetchToFile` は使えない）。`move`・`copy` は `{ toVolume: "disk2" }` でほかのストレージへも送れる（コピーしてから消すので時間がかかる） |
 | `nas.search(q, { limit, hidden })` | すべてのストレージから探す |
-| `nas.extensions()` | 入っている拡張機能の一覧（`url`・`iconUrl`・`isHome` など） |
+| `nas.extensions()` | 入っている拡張機能の一覧（`url`・`iconUrl`・`isHome`・`opens`・`canOpen` など） |
+| `openedFile()` | NAS の画面から開かれたファイル `{ volume, path, name, client }`。そうでなければ `null`（[2.9](#29-ファイルを開く拡張機能opens)） |
 
 `options`（`UploadOptions`）:
 
@@ -288,6 +317,8 @@ SDK を使わずに直接呼ぶこともできます。パスはすべてクエ�
 | PUT | `/x/<id>/api/file?path=/a.pdf[&overwrite=1][&mkdirs=1]` | ファイルの中身そのまま | `201` + `Entry` |
 | POST | `/x/<id>/api/mkdir` | `{"path": "/books"}` | `Entry` |
 | POST | `/x/<id>/api/rename` | `{"path": "/a.pdf", "newName": "b.pdf"}` | `Entry` |
+| POST | `/x/<id>/api/move` | `{"path": "/a.pdf", "toDir": "/books"}` | 移動後の `Entry`。同じ名前があれば `409` |
+| POST | `/x/<id>/api/copy` | `{"path": "/a.pdf", "toDir": "/books"}` | コピー後の `Entry`。同じ名前があれば `409` |
 | POST | `/x/<id>/api/delete` | `{"path": "/a.pdf"}` | `{"ok": true}` |
 | GET | `/x/<id>/api/search?q=...[&limit=50][&hidden=1]` | | `{ q, query, hits: SearchHit[], total, fuzzy, status }`。`query.summary` は読み取った条件（「追加: 3日以内」など）、`hits[].added` は ANAS に追加された日時（不明なら無し）、`total` は 1000 を超えると 1001、`fuzzy` は似た名前を返したとき true、`status.running` は索引を作成中のとき true |
 | POST | `/x/<id>/api/fetch` | `{"url": "https://...", "method": "GET", "headers": {}, "body": "テキスト"}`（バイナリは `"bodyBase64"`） | 外部サイトの本文そのまま。ステータスは常に `200` で、外部サイトのステータスは `X-Anas-Status`、最後の URL は `X-Anas-Url`、ヘッダーは `X-Anas-Headers`（`{"名前": "値"}` の JSON を URL エンコードしたもの） |
@@ -428,4 +459,5 @@ ANAS の拡張機能を作ってください。仕様書（EXTENSION_SPEC.md）�
 - [ ] ファイル名に `: * ? " < > |` などを使っていない
 - [ ] 置いたあとに「再スキャン」した
 - [ ] ホーム画面にする拡張機能なら、`"scope": "all"` と `"home": true` を書き、`/?ui=default`（標準の画面）へのリンクを置いた
+- [ ] ファイルを開く拡張機能なら、`"scope": "all"` と `"opens": [".拡張子"]` を書き、`openedFile()` が null のとき（直接開かれたとき）の表示も用意した
 - [ ] スマホで使うなら、`<meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content">`（キーボードが出たときに画面が縮み、入力欄が隠れない）

@@ -58,7 +58,7 @@
   img.src = anas.fileUrl("/covers/a.jpg");
   await anas.upload(joinPath("/books", file.name), file, { onProgress: (d, t) =&gt; console.log(d / t) });
 &lt;/script&gt;</code></pre>
-    <p>Also: <code>zipUrl</code> (download a folder as zip), <code>streamUrl</code> (for audio / video: seekable, also works in VLC etc.), <code>playlistUrl</code> (M3U8 playlist of a folder), <code>stat</code>, <code>exists</code>, <code>readText</code>, <code>readJson</code>, <code>writeJson</code>, <code>listRecursive</code>, <code>mkdir</code>, <code>rename</code>, <code>remove</code>. Include <code>/_anas/base.css</code> for the ANAS look with automatic light / dark.</p>
+    <p>Also: <code>zipUrl</code> (download a folder as zip), <code>streamUrl</code> (for audio / video: seekable, also works in VLC etc.), <code>playlistUrl</code> (M3U8 playlist of a folder), <code>stat</code>, <code>exists</code>, <code>readText</code>, <code>readJson</code>, <code>writeJson</code>, <code>listRecursive</code>, <code>mkdir</code>, <code>rename</code>, <code>move</code>, <code>copy</code>, <code>remove</code>. Include <code>/_anas/base.css</code> for the ANAS look with automatic light / dark.</p>
     <p>Inside the ANAS app, the app theme is set as <code>&lt;html data-anas-theme="dark"&gt;</code> (or <code>"light"</code>), because on Android 9 <code>prefers-color-scheme</code> does not follow the app setting. If you write your own dark colors instead of using base.css, also match <code>:root[data-anas-theme="dark"]</code>.</p>
 
     <p><code>anas.search("PDF uploaded within 3 days")</code> searches the files in your own <code>data/</code> with a plain sentence (by name, type, date and size).</p>
@@ -79,6 +79,13 @@ await anas.fetchToFile(imageUrl, "/.covers/4000000000.jpg", { overwrite: true })
 const [disk] = await nas.volumes();
 const entries = await nas.volume(disk.id).list("/");   // paths from the storage root</code></pre>
     <p>The standard page is always available by adding <code>?ui=default</code> to the URL (e.g. <code>http://192.168.1.10:8080/?ui=default</code>). Disabling or removing the extension switches back to the standard page automatically.</p>
+
+    <h3 id="opens">Opening unusual file types</h3>
+    <p>The NAS page shows images, text, PDF, audio and video itself. For other formats (KiCad data, CAD, custom logs, …) write an extension that opens them: put <code>"scope": "all"</code> and <code>"opens": [".csv"]</code> in <code>anas.json</code> and allow access to the whole NAS in the app. Opening such a file in the NAS file list then hands it to your extension.</p>
+<pre><code>import { openedFile } from "/_anas/sdk.js";
+const file = openedFile();   // { volume, path, name, client } or null
+if (file) show(await file.client.readText(file.path));</code></pre>
+    <p>See the "CSV viewer" sample.</p>
 
     <h2>4. Installing</h2>
     <ol class="steps">
@@ -104,6 +111,10 @@ const entries = await nas.volume(disk.id).list("/");   // paths from the storage
       <div class="card">
         <h3>Simple home (.home_simple)</h3>
         <p>An example that replaces the NAS start page: storage and file lists, uploads and links to your extensions.</p>
+      </div>
+      <div class="card">
+        <h3>CSV viewer (.csv_viewer)</h3>
+        <p>An example of a file-opening extension (<code>opens</code>): shows .csv / .tsv files on the NAS as a table, reads Shift_JIS CSV from Excel, with filtering and sorting. Only the first 20 MB of large files is read.</p>
       </div>
     </div>
   </main>

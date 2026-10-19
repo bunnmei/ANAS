@@ -54,8 +54,23 @@
       "description": "true なら NAS の最初の画面（/）の代わりに使える。scope: \"all\" が必要。アプリで「ホーム画面にする」を選んだときだけ有効",
       "type": "boolean",
       "default": false
+    },
+    "opens": {
+      "description": "この拡張機能で開けるファイルの拡張子（例: [\".csv\", \".tsv\"]）。NAS の画面でそのファイルを開くと /x/<id>/?volume=&path= が開く。scope: \"all\" が必要",
+      "type": "array",
+      "items": { "type": "string", "pattern": "^\\.[a-z0-9][a-z0-9_+-]{0,31}$" },
+      "uniqueItems": true,
+      "default": []
     }
   },
-  "if": { "properties": { "home": { "const": true } }, "required": ["home"] },
-  "then": { "properties": { "scope": { "const": "all" } }, "required": ["scope"] }
+  "allOf": [
+    {
+      "if": { "properties": { "home": { "const": true } }, "required": ["home"] },
+      "then": { "properties": { "scope": { "const": "all" } }, "required": ["scope"] }
+    },
+    {
+      "if": { "properties": { "opens": { "minItems": 1 } }, "required": ["opens"] },
+      "then": { "properties": { "scope": { "const": "all" } }, "required": ["scope"] }
+    }
+  ]
 }
